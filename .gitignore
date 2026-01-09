@@ -4,3 +4,5 @@ backend/node_modules/
 frontend/node_modules/  
 frontend/dist/  
 ml/__pycache__/ 
+backend/.env 
+backend/.env.example 
