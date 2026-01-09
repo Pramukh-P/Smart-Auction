@@ -6,7 +6,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload"; // ✅ File upload
-import { connection } from "./database/connection.js";
+import connectDB from "./database/connection.js";
 import { errorMiddleware } from "./middlewares/error.js";
 
 // Cron jobs
@@ -72,7 +72,7 @@ app.use("/api/v1/order", orderRoutes);
 endedAuctionCron();
 verifyCommissionCron();
 sendWelcomeEmailCron();
-connection();
+connectDB();
 
 app.use(errorMiddleware);
 

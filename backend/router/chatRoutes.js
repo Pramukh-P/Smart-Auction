@@ -9,9 +9,6 @@ import { User } from "../models/userSchema.js";
 dotenv.config({ path: "./config/config.env" });
 
 const router = express.Router();
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 console.log("✅ OpenAI key exists:", !!process.env.OPENAI_API_KEY);
 

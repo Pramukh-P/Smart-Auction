@@ -1,17 +1,13 @@
-//backend/database/connection.js
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-export const connection = () => {
-  mongoose
-    .connect(process.env.MONGO_URI, {
-      dbName: "MERN_AUCTION_PLATFORM",
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => {
-      console.log("✅ Connected to database.");
-    })
-    .catch((err) => {
-      console.log(`❌ Error connecting to database: ${err}`);
-    });
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGOURI);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error('❌ Error connecting to database:', error.message);
+    process.exit(1);
+  }
 };
+
+export default connectDB;
