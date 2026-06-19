@@ -4,7 +4,12 @@ import { ShoppingBag, Package, Heart, Star, AlertCircle, CheckCircle, Truck, Upl
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import { fetchMyOrders, fetchOrderById, confirmDelivery, raiseComplaint, submitRating, verifyPayment, createRazorpayOrder, clearOrderError, clearOrderMessage } from "../store/slices";
-import { getWishlist, updateProfile, toggleWishlist, clearError, clearMessage } from "../store/slices";
+import {
+  updateProfile,
+  toggleWishlist,
+  clearError,
+  clearMessage
+} from "../store/slices";
 import { Order, Auction } from "../types";
 import { Spinner, EmptyState, OrderStatusBadge } from "../components/ui/index";
 import api from "../lib/axios";
@@ -20,9 +25,9 @@ export const MyOrders: React.FC = () => {
   const [showRating, setShowRating] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
 
-  useEffect(() => { dispatch(fetchMyOrders()); }, [dispatch]);
+  useEffect(() => { dispatch(fetchMyOrders(undefined)); }, [dispatch]);
   useEffect(() => { if (error) { toast.error(error); dispatch(clearOrderError()); } }, [error]);
-  useEffect(() => { if (message) { toast.success(message); dispatch(clearOrderMessage()); dispatch(fetchMyOrders()); } }, [message]);
+  useEffect(() => { if (message) { toast.success(message); dispatch(clearOrderMessage()); dispatch(fetchMyOrders(undefined)); } }, [message]);
 
   const handlePay = async (order: Order) => {
     setPayLoading(true);
@@ -32,7 +37,7 @@ export const MyOrders: React.FC = () => {
       if (res.simulated) {
         await dispatch(verifyPayment({ orderId: order._id, auctionId: typeof auc==="string"?auc:auc._id })).unwrap();
         toast.success("Payment completed (simulated)!");
-        dispatch(fetchMyOrders());
+        dispatch(fetchMyOrders(undefined));
         return;
       }
       const Razorpay = (window as any).Razorpay;
@@ -43,7 +48,7 @@ export const MyOrders: React.FC = () => {
         order_id: res.order.id,
         handler: async (response: any) => {
           await dispatch(verifyPayment({ orderId: order._id, auctionId: typeof auc==="string"?auc:auc._id, ...response })).unwrap();
-          toast.success("Payment successful!"); dispatch(fetchMyOrders());
+          toast.success("Payment successful!"); dispatch(fetchMyOrders(undefined));
         },
         theme: { color: "#6366f1" }
       });

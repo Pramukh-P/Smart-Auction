@@ -5,17 +5,17 @@ import { AuthState, AuctionState, NotifState, OrderState } from "../types";
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 const authInit: AuthState = { user: null, isAuthenticated: false, loading: false, error: null, message: null };
 
-const at = (name: string, url: string, method: "get"|"post"|"put"|"delete" = "post") =>
+const at = (name: string, url: string, method: "get" | "post" | "put" | "delete" = "post") =>
   createAsyncThunk(`auth/${name}`, async (data: any, { rejectWithValue }) => {
     try { const r = method === "get" ? await api.get(url) : await api[method](url, data); return r.data; }
     catch (e: any) { return rejectWithValue(e.message); }
   });
 
-export const register    = at("register", "/users/register");
-export const verifyOTP   = at("verifyOTP", "/users/verify-otp");
-export const resendOTP   = at("resendOTP", "/users/resend-otp");
-export const login       = at("login", "/users/login");
-export const logout      = at("logout", "/users/logout", "get");
+export const register = at("register", "/users/register");
+export const verifyOTP = at("verifyOTP", "/users/verify-otp");
+export const resendOTP = at("resendOTP", "/users/resend-otp");
+export const login = at("login", "/users/login");
+export const logout = at("logout", "/users/logout", "get");
 export const fetchProfile = at("me", "/users/me", "get");
 export const updateProfile = at("update", "/users/me", "put");
 export const forgotPassword = at("forgot", "/users/forgot-password");
@@ -30,15 +30,15 @@ export const authSlice = createSlice({
   extraReducers: b => {
     const pend = (s: AuthState) => { s.loading = true; s.error = null; };
     const rej = (s: AuthState, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; };
-    b.addCase(register.pending, pend).addCase(register.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; }).addCase(register.rejected, rej);
-    b.addCase(verifyOTP.pending, pend).addCase(verifyOTP.fulfilled, (s,a) => { s.loading=false; s.isAuthenticated=true; s.user=a.payload.user; s.message=a.payload.message; }).addCase(verifyOTP.rejected, rej);
-    b.addCase(resendOTP.pending, pend).addCase(resendOTP.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; }).addCase(resendOTP.rejected, rej);
-    b.addCase(login.pending, pend).addCase(login.fulfilled, (s,a) => { s.loading=false; s.isAuthenticated=true; s.user=a.payload.user; s.message=a.payload.message; }).addCase(login.rejected, rej);
+    b.addCase(register.pending, pend).addCase(register.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(register.rejected, rej);
+    b.addCase(verifyOTP.pending, pend).addCase(verifyOTP.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(verifyOTP.rejected, rej);
+    b.addCase(resendOTP.pending, pend).addCase(resendOTP.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resendOTP.rejected, rej);
+    b.addCase(login.pending, pend).addCase(login.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(login.rejected, rej);
     b.addCase(logout.fulfilled, () => authInit).addCase(logout.rejected, () => authInit);
-    b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s,a) => { s.loading=false; s.isAuthenticated=true; s.user=a.payload.user; }).addCase(fetchProfile.rejected, s => { s.loading=false; s.isAuthenticated=false; s.user=null; });
-    b.addCase(updateProfile.pending, pend).addCase(updateProfile.fulfilled, (s,a) => { s.loading=false; s.user=a.payload.user; s.message=a.payload.message; }).addCase(updateProfile.rejected, rej);
-    b.addCase(forgotPassword.pending, pend).addCase(forgotPassword.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; }).addCase(forgotPassword.rejected, rej);
-    b.addCase(resetPassword.pending, pend).addCase(resetPassword.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; }).addCase(resetPassword.rejected, rej);
+    b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; }).addCase(fetchProfile.rejected, s => { s.loading = false; s.isAuthenticated = false; s.user = null; });
+    b.addCase(updateProfile.pending, pend).addCase(updateProfile.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.message = a.payload.message; }).addCase(updateProfile.rejected, rej);
+    b.addCase(forgotPassword.pending, pend).addCase(forgotPassword.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(forgotPassword.rejected, rej);
+    b.addCase(resetPassword.pending, pend).addCase(resetPassword.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resetPassword.rejected, rej);
     b.addCase(toggleWishlist.fulfilled, (s, a) => { if (s.user) { if (a.payload.action === "added") s.user.wishlist.push(a.meta.arg); else s.user.wishlist = s.user.wishlist.filter(id => id !== a.meta.arg); } });
   }
 });
@@ -80,17 +80,21 @@ export const auctionSlice = createSlice({
     resetDetail: s => { s.auctionDetail = null; s.bids = []; },
     wsUpdateBid: (s, a: PayloadAction<any>) => {
       const { auctionId, currentBid, highestBidderName, bids, endTime } = a.payload;
-      if (s.auctionDetail?._id === auctionId) { s.auctionDetail.currentBid = currentBid; s.auctionDetail.highestBidderName = highestBidderName; s.auctionDetail.endTime = endTime; if (bids) s.bids = bids; }
+      if (s.auctionDetail && s.auctionDetail._id === auctionId) {
+        s.auctionDetail.currentBid = currentBid;
+        s.auctionDetail.highestBidderName = highestBidderName;
+        s.auctionDetail.endTime = endTime;
+      }
       const a2 = s.auctions.find(x => x._id === auctionId); if (a2) a2.currentBid = currentBid;
     },
     wsExtendTime: (s, a: PayloadAction<any>) => {
-      if (s.auctionDetail?._id === a.payload.auctionId) s.auctionDetail.endTime = a.payload.newEndTime;
+      if (s.auctionDetail && s.auctionDetail._id === a.payload.auctionId) s.auctionDetail.endTime = a.payload.newEndTime;
     },
     wsNewQuestion: (s, a: PayloadAction<any>) => {
-      if (s.auctionDetail?._id === a.payload.auctionId) s.auctionDetail.questions.push(a.payload.question);
+      if (s.auctionDetail && s.auctionDetail._id === a.payload.auctionId) s.auctionDetail.questions.push(a.payload.question);
     },
     wsAnswered: (s, a: PayloadAction<any>) => {
-      if (s.auctionDetail?._id === a.payload.auctionId) {
+      if (s.auctionDetail && s.auctionDetail._id === a.payload.auctionId) {
         const q = s.auctionDetail.questions[a.payload.questionIndex];
         if (q) q.answer = a.payload.answer;
       }
@@ -99,14 +103,14 @@ export const auctionSlice = createSlice({
   extraReducers: b => {
     const pend = (s: AuctionState) => { s.loading = true; s.error = null; };
     const rej = (s: AuctionState, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; };
-    b.addCase(fetchAuctions.pending, pend).addCase(fetchAuctions.fulfilled, (s,a) => { s.loading=false; s.auctions=a.payload.items; }).addCase(fetchAuctions.rejected, rej);
-    b.addCase(fetchAuction.pending, pend).addCase(fetchAuction.fulfilled, (s,a) => { s.loading=false; s.auctionDetail=a.payload.auction; s.bids=a.payload.bidders||[]; }).addCase(fetchAuction.rejected, rej);
-    b.addCase(fetchMyAuctions.pending, pend).addCase(fetchMyAuctions.fulfilled, (s,a) => { s.loading=false; s.myAuctions=a.payload.auctions; }).addCase(fetchMyAuctions.rejected, rej);
-    b.addCase(createAuction.pending, pend).addCase(createAuction.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; if (a.payload.auction) s.auctions.unshift(a.payload.auction); }).addCase(createAuction.rejected, rej);
-    b.addCase(deleteAuction.pending, pend).addCase(deleteAuction.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; s.myAuctions=s.myAuctions.filter(x=>x._id!==a.payload.id); s.auctions=s.auctions.filter(x=>x._id!==a.payload.id); }).addCase(deleteAuction.rejected, rej);
-    b.addCase(republishAuction.pending, pend).addCase(republishAuction.fulfilled, (s,a) => { s.loading=false; s.message=a.payload.message; }).addCase(republishAuction.rejected, rej);
-    b.addCase(submitQuestion.fulfilled, (s,a) => { if (s.auctionDetail) s.auctionDetail.questions = a.payload.questions; });
-    b.addCase(submitAnswer.fulfilled, (s,a) => { if (s.auctionDetail) s.auctionDetail.questions = a.payload.questions; });
+    b.addCase(fetchAuctions.pending, pend).addCase(fetchAuctions.fulfilled, (s, a) => { s.loading = false; s.auctions = a.payload.items; }).addCase(fetchAuctions.rejected, rej);
+    b.addCase(fetchAuction.pending, pend).addCase(fetchAuction.fulfilled, (s, a) => { s.loading = false; s.auctionDetail = a.payload.auction; s.bids = a.payload.bidders || []; }).addCase(fetchAuction.rejected, rej);
+    b.addCase(fetchMyAuctions.pending, pend).addCase(fetchMyAuctions.fulfilled, (s, a) => { s.loading = false; s.myAuctions = a.payload.auctions; }).addCase(fetchMyAuctions.rejected, rej);
+    b.addCase(createAuction.pending, pend).addCase(createAuction.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; if (a.payload.auction) s.auctions.unshift(a.payload.auction); }).addCase(createAuction.rejected, rej);
+    b.addCase(deleteAuction.pending, pend).addCase(deleteAuction.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; s.myAuctions = s.myAuctions.filter(x => x._id !== a.payload.id); s.auctions = s.auctions.filter(x => x._id !== a.payload.id); }).addCase(deleteAuction.rejected, rej);
+    b.addCase(republishAuction.pending, pend).addCase(republishAuction.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(republishAuction.rejected, rej);
+    b.addCase(submitQuestion.fulfilled, (s, a) => { if (s.auctionDetail) s.auctionDetail.questions = a.payload.questions; });
+    b.addCase(submitAnswer.fulfilled, (s, a) => { if (s.auctionDetail) s.auctionDetail.questions = a.payload.questions; });
   }
 });
 export const { clearAuctionError, clearAuctionMessage, resetDetail, wsUpdateBid, wsExtendTime, wsNewQuestion, wsAnswered } = auctionSlice.actions;
@@ -127,10 +131,10 @@ export const notifSlice = createSlice({
   reducers: { addWsNotif: (s, a: PayloadAction<any>) => { s.notifications.unshift(a.payload); s.unread++; } },
   extraReducers: b => {
     b.addCase(fetchNotifications.pending, s => { s.loading = true; });
-    b.addCase(fetchNotifications.fulfilled, (s,a) => { s.loading=false; s.notifications=a.payload.notifications; s.unread=a.payload.unread; });
+    b.addCase(fetchNotifications.fulfilled, (s, a) => { s.loading = false; s.notifications = a.payload.notifications; s.unread = a.payload.unread; });
     b.addCase(fetchNotifications.rejected, s => { s.loading = false; });
-    b.addCase(markAllSeen.fulfilled, s => { s.notifications=s.notifications.map(n=>({...n,seen:true})); s.unread=0; });
-    b.addCase(deleteNotif.fulfilled, (s,a) => { s.notifications=s.notifications.filter(n=>n._id!==a.payload); });
+    b.addCase(markAllSeen.fulfilled, s => { s.notifications = s.notifications.map(n => ({ ...n, seen: true })); s.unread = 0; });
+    b.addCase(deleteNotif.fulfilled, (s, a) => { s.notifications = s.notifications.filter(n => n._id !== a.payload); });
   }
 });
 export const { addWsNotif } = notifSlice.actions;
@@ -152,24 +156,24 @@ export const verifyPayment = ot("rzpVerify", (data: any) => api.post("/orders/pa
 
 export const orderSlice = createSlice({
   name: "order", initialState: orderInit,
-  reducers: { clearOrderError: s=>{s.error=null;}, clearOrderMessage: s=>{s.message=null;} },
+  reducers: { clearOrderError: s => { s.error = null; }, clearOrderMessage: s => { s.message = null; } },
   extraReducers: b => {
     const pend = (s: OrderState) => { s.loading = true; s.error = null; };
-    const rej = (s: OrderState, a: PayloadAction<any>) => { s.loading=false; s.error=a.payload; };
+    const rej = (s: OrderState, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; };
     const ok = (key: keyof OrderState) => (s: OrderState, a: PayloadAction<any>) => {
-      s.loading=false; if (key === "orders") s.orders=a.payload.orders;
-      else if (key === "salesOrders") s.salesOrders=a.payload.orders;
-      else if (key === "activeOrder") s.activeOrder=a.payload.order;
-      if (a.payload.message) s.message=a.payload.message;
+      s.loading = false; if (key === "orders") s.orders = a.payload.orders;
+      else if (key === "salesOrders") s.salesOrders = a.payload.orders;
+      else if (key === "activeOrder") s.activeOrder = a.payload.order;
+      if (a.payload.message) s.message = a.payload.message;
     };
-    b.addCase(fetchMyOrders.pending,pend).addCase(fetchMyOrders.fulfilled,ok("orders")).addCase(fetchMyOrders.rejected,rej);
-    b.addCase(fetchSalesOrders.pending,pend).addCase(fetchSalesOrders.fulfilled,ok("salesOrders")).addCase(fetchSalesOrders.rejected,rej);
-    b.addCase(fetchOrderById.pending,pend).addCase(fetchOrderById.fulfilled,ok("activeOrder")).addCase(fetchOrderById.rejected,rej);
-    b.addCase(shipOrder.pending,pend).addCase(shipOrder.fulfilled,ok("activeOrder")).addCase(shipOrder.rejected,rej);
-    b.addCase(confirmDelivery.pending,pend).addCase(confirmDelivery.fulfilled,ok("activeOrder")).addCase(confirmDelivery.rejected,rej);
-    b.addCase(raiseComplaint.pending,pend).addCase(raiseComplaint.fulfilled,(s,a)=>{s.loading=false;s.message=a.payload.message;}).addCase(raiseComplaint.rejected,rej);
-    b.addCase(submitRating.pending,pend).addCase(submitRating.fulfilled,(s,a)=>{s.loading=false;s.message=a.payload.message;}).addCase(submitRating.rejected,rej);
-    b.addCase(verifyPayment.pending,pend).addCase(verifyPayment.fulfilled,ok("activeOrder")).addCase(verifyPayment.rejected,rej);
+    b.addCase(fetchMyOrders.pending, pend).addCase(fetchMyOrders.fulfilled, ok("orders")).addCase(fetchMyOrders.rejected, rej);
+    b.addCase(fetchSalesOrders.pending, pend).addCase(fetchSalesOrders.fulfilled, ok("salesOrders")).addCase(fetchSalesOrders.rejected, rej);
+    b.addCase(fetchOrderById.pending, pend).addCase(fetchOrderById.fulfilled, ok("activeOrder")).addCase(fetchOrderById.rejected, rej);
+    b.addCase(shipOrder.pending, pend).addCase(shipOrder.fulfilled, ok("activeOrder")).addCase(shipOrder.rejected, rej);
+    b.addCase(confirmDelivery.pending, pend).addCase(confirmDelivery.fulfilled, ok("activeOrder")).addCase(confirmDelivery.rejected, rej);
+    b.addCase(raiseComplaint.pending, pend).addCase(raiseComplaint.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(raiseComplaint.rejected, rej);
+    b.addCase(submitRating.pending, pend).addCase(submitRating.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(submitRating.rejected, rej);
+    b.addCase(verifyPayment.pending, pend).addCase(verifyPayment.fulfilled, ok("activeOrder")).addCase(verifyPayment.rejected, rej);
   }
 });
 export const { clearOrderError, clearOrderMessage } = orderSlice.actions;
@@ -179,12 +183,12 @@ export const placeBid = createAsyncThunk("bid/place", async ({ id, amount }: { i
   try { const r = await api.post(`/bids/${id}`, { amount }); return r.data; } catch (e: any) { return rejectWithValue(e.message); }
 });
 export const bidSlice = createSlice({
-  name: "bid", initialState: { loading: false, error: null as string|null, message: null as string|null },
-  reducers: { clearBidError: s=>{s.error=null;}, clearBidMessage: s=>{s.message=null;} },
+  name: "bid", initialState: { loading: false, error: null as string | null, message: null as string | null },
+  reducers: { clearBidError: s => { s.error = null; }, clearBidMessage: s => { s.message = null; } },
   extraReducers: b => {
-    b.addCase(placeBid.pending, s=>{s.loading=true;s.error=null;});
-    b.addCase(placeBid.fulfilled, (s,a)=>{s.loading=false;s.message=a.payload.message;});
-    b.addCase(placeBid.rejected, (s,a:PayloadAction<any>)=>{s.loading=false;s.error=a.payload;});
+    b.addCase(placeBid.pending, s => { s.loading = true; s.error = null; });
+    b.addCase(placeBid.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; });
+    b.addCase(placeBid.rejected, (s, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; });
   }
 });
 export const { clearBidError, clearBidMessage } = bidSlice.actions;

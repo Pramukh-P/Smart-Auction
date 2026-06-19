@@ -64,9 +64,9 @@ export const MyAuctions: React.FC = () => {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
-  useEffect(() => { dispatch(fetchMyAuctions()); }, [dispatch]);
+  useEffect(() => { dispatch(fetchMyAuctions(undefined)); }, [dispatch]);
   useEffect(() => { if (error) { toast.error(error); dispatch(clearAuctionError()); } }, [error]);
-  useEffect(() => { if (message) { toast.success(message); dispatch(clearAuctionMessage()); dispatch(fetchMyAuctions()); setRepublishAuc(null); } }, [message]);
+  useEffect(() => { if (message) { toast.success(message); dispatch(clearAuctionMessage()); dispatch(fetchMyAuctions(undefined)); setRepublishAuc(null); } }, [message]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this auction?")) return;
@@ -289,9 +289,9 @@ export const MySales: React.FC = () => {
   const [shipForm, setShipForm] = useState({ courier:"", trackingId:"", notes:"" });
   const [showShip, setShowShip] = useState(false);
 
-  useEffect(() => { dispatch(fetchSalesOrders()); }, [dispatch]);
+  useEffect(() => { dispatch(fetchSalesOrders(undefined)); }, [dispatch]);
   useEffect(() => { if (error) { toast.error(error); dispatch(clearOrderError()); } }, [error]);
-  useEffect(() => { if (message) { toast.success(message); dispatch(clearOrderMessage()); dispatch(fetchSalesOrders()); setShowShip(false); } }, [message]);
+  useEffect(() => { if (message) { toast.success(message); dispatch(clearOrderMessage()); dispatch(fetchSalesOrders(undefined)); setShowShip(false); } }, [message]);
 
   const handleShip = () => {
     if (!selected||!shipForm.courier||!shipForm.trackingId) { toast.error("Courier and tracking ID required."); return; }
