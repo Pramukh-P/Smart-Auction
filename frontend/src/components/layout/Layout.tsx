@@ -27,7 +27,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (isAuthenticated)
       dispatch(fetchNotifications(undefined));
   }, [isAuthenticated, dispatch]);
-  
+
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
@@ -46,7 +46,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleNotifOpen = () => {
     setNotifOpen(v => !v);
-    if (!notifOpen && unread > 0) dispatch(markAllSeen());
+    if (!notifOpen && unread > 0) dispatch(markAllSeen(undefined));
   };
 
   const handleSearch = (e: React.FormEvent) => {
