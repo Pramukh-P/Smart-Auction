@@ -38,7 +38,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, []);
 
   const handleLogout = async () => {
-    await dispatch(logout());
+    await dispatch(logout(undefined));
     setUserOpen(false);
     navigate("/login");
     toast.success("Logged out successfully.");

@@ -5,11 +5,17 @@ import { AuthState, AuctionState, NotifState, OrderState } from "../types";
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 const authInit: AuthState = { user: null, isAuthenticated: false, loading: false, error: null, message: null };
 
-const at = (name: string, url: string, method: "get" | "post" | "put" | "delete" = "post") =>
-  createAsyncThunk(`auth/${name}`, async (data: any, { rejectWithValue }) => {
-    try { const r = method === "get" ? await api.get(url) : await api[method](url, data); return r.data; }
-    catch (e: any) { return rejectWithValue(e.message); }
-  });
+const at = (
+  name: string,
+  url: string,
+  method: "get" | "post" | "put" | "delete" = "post"
+) =>
+  createAsyncThunk(
+    `auth/${name}`,
+    async (data: any = undefined, { rejectWithValue }) => {
+      try { const r = method === "get" ? await api.get(url) : await api[method](url, data); return r.data; }
+      catch (e: any) { return rejectWithValue(e.message); }
+    });
 
 export const register = at("register", "/users/register");
 export const verifyOTP = at("verifyOTP", "/users/verify-otp");
