@@ -23,8 +23,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useGlobalSocket(user?._id);
 
-  useEffect(() => { if (isAuthenticated) dispatch(fetchNotifications()); }, [isAuthenticated]);
-
+  useEffect(() => {
+    if (isAuthenticated)
+      dispatch(fetchNotifications(undefined));
+  }, [isAuthenticated, dispatch]);
+  
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
@@ -52,9 +55,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   const nav = [
-    { to:"/", label:"Home" },
-    { to:"/auctions", label:"Auctions" },
-    { to:"/how-it-works", label:"How It Works" },
+    { to: "/", label: "Home" },
+    { to: "/auctions", label: "Auctions" },
+    { to: "/how-it-works", label: "How It Works" },
   ];
 
   const isActive = (p: string) => location.pathname === p;
@@ -67,7 +70,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 font-bold text-xl text-indigo-600 flex-shrink-0">
-              <Gavel size={22}/> SmartAuction
+              <Gavel size={22} /> SmartAuction
             </Link>
 
             {/* Desktop nav */}
@@ -86,10 +89,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {/* Search */}
             <form onSubmit={handleSearch} className="hidden md:flex items-center">
               <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-                <input value={searchQ} onChange={e=>setSearchQ(e.target.value)}
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
                   className="pl-9 pr-4 py-2 bg-gray-100 text-sm rounded-lg border-0 outline-none focus:ring-2 focus:ring-indigo-300 w-52 placeholder:text-gray-400"
-                  placeholder="Search auctions..."/>
+                  placeholder="Search auctions..." />
               </div>
             </form>
 
@@ -101,7 +104,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <div ref={notifRef} className="relative">
                     <button onClick={handleNotifOpen}
                       className="relative p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                      <Bell size={20}/>
+                      <Bell size={20} />
                       {unread > 0 && (
                         <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-0.5">
                           {unread > 9 ? "9+" : unread}
@@ -112,7 +115,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                           <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
-                          <button onClick={()=>setNotifOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={15}/></button>
+                          <button onClick={() => setNotifOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={15} /></button>
                         </div>
                         <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
                           {notifications.length === 0
@@ -121,16 +124,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                               <div key={n._id} className={`flex gap-2 px-4 py-3 group ${!n.seen ? "bg-indigo-50/40" : ""}`}>
                                 <div className="flex-1 min-w-0">
                                   {n.link ? (
-                                    <Link to={n.link} onClick={()=>setNotifOpen(false)}
+                                    <Link to={n.link} onClick={() => setNotifOpen(false)}
                                       className="text-sm text-gray-800 hover:text-indigo-600 leading-snug block">{n.message}</Link>
                                   ) : (
                                     <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
                                   )}
                                   <p className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
                                 </div>
-                                <button onClick={()=>dispatch(deleteNotif(n._id))}
+                                <button onClick={() => dispatch(deleteNotif(n._id))}
                                   className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-400 transition-all flex-shrink-0">
-                                  <X size={12}/>
+                                  <X size={12} />
                                 </button>
                               </div>
                             ))
@@ -142,11 +145,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
                   {/* User menu */}
                   <div ref={userRef} className="relative">
-                    <button onClick={()=>setUserOpen(v=>!v)}
+                    <button onClick={() => setUserOpen(v => !v)}
                       className="flex items-center gap-1.5 p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
                       <img src={user.profileImage?.url || "https://via.placeholder.com/32"} alt={user.userName}
-                        className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100"/>
-                      <ChevronDown size={13} className="text-gray-500"/>
+                        className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100" />
+                      <ChevronDown size={13} className="text-gray-500" />
                     </button>
                     {userOpen && (
                       <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
@@ -156,21 +159,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                           <span className="inline-block mt-1 text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">{user.role}</span>
                         </div>
                         <div className="py-1">
-                          <Link to="/profile" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><User size={14}/> Profile</Link>
+                          <Link to="/profile" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><User size={14} /> Profile</Link>
                           {user.role === "Bidder" && <>
-                            <Link to="/my-orders" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><ShoppingBag size={14}/> My Orders</Link>
-                            <Link to="/wishlist" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><Heart size={14}/> Wishlist</Link>
+                            <Link to="/my-orders" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><ShoppingBag size={14} /> My Orders</Link>
+                            <Link to="/wishlist" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><Heart size={14} /> Wishlist</Link>
                           </>}
                           {user.role === "Auctioneer" && <>
-                            <Link to="/my-auctions" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><Package size={14}/> My Auctions</Link>
-                            <Link to="/create-auction" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><Plus size={14}/> Create Auction</Link>
-                            <Link to="/my-sales" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><ShoppingBag size={14}/> My Sales</Link>
+                            <Link to="/my-auctions" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><Package size={14} /> My Auctions</Link>
+                            <Link to="/create-auction" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><Plus size={14} /> Create Auction</Link>
+                            <Link to="/my-sales" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><ShoppingBag size={14} /> My Sales</Link>
                           </>}
                           {user.role === "Super Admin" && (
-                            <Link to="/admin" onClick={()=>setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><LayoutDashboard size={14}/> Admin Dashboard</Link>
+                            <Link to="/admin" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><LayoutDashboard size={14} /> Admin Dashboard</Link>
                           )}
-                          <hr className="my-1 border-gray-100"/>
-                          <button onClick={handleLogout} className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"><LogOut size={14}/> Sign out</button>
+                          <hr className="my-1 border-gray-100" />
+                          <button onClick={handleLogout} className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"><LogOut size={14} /> Sign out</button>
                         </div>
                       </div>
                     )}
@@ -182,8 +185,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <Link to="/register" className="text-sm bg-indigo-600 text-white font-medium px-4 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">Sign Up</Link>
                 </div>
               )}
-              <button className="md:hidden p-2 text-gray-600" onClick={()=>setMobileOpen(v=>!v)}>
-                {mobileOpen ? <X size={20}/> : <Menu size={20}/>}
+              <button className="md:hidden p-2 text-gray-600" onClick={() => setMobileOpen(v => !v)}>
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </div>
@@ -193,15 +196,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {mobileOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
             <form onSubmit={handleSearch} className="flex gap-2 mb-3">
-              <input value={searchQ} onChange={e=>setSearchQ(e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-100 text-sm rounded-lg outline-none" placeholder="Search auctions..."/>
-              <button type="submit" className="px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg"><Search size={15}/></button>
+              <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                className="flex-1 px-3 py-2 bg-gray-100 text-sm rounded-lg outline-none" placeholder="Search auctions..." />
+              <button type="submit" className="px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg"><Search size={15} /></button>
             </form>
             {nav.map(n => (
-              <Link key={n.to} to={n.to} onClick={()=>setMobileOpen(false)}
-                className={`block py-2 text-sm font-medium ${isActive(n.to)?"text-indigo-600":"text-gray-700"}`}>{n.label}</Link>
+              <Link key={n.to} to={n.to} onClick={() => setMobileOpen(false)}
+                className={`block py-2 text-sm font-medium ${isActive(n.to) ? "text-indigo-600" : "text-gray-700"}`}>{n.label}</Link>
             ))}
-            {user?.role === "Super Admin" && <Link to="/admin" onClick={()=>setMobileOpen(false)} className="block py-2 text-sm text-gray-700">Admin</Link>}
+            {user?.role === "Super Admin" && <Link to="/admin" onClick={() => setMobileOpen(false)} className="block py-2 text-sm text-gray-700">Admin</Link>}
           </div>
         )}
       </nav>
@@ -214,13 +217,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <div className="flex items-center gap-2 font-bold text-xl mb-3"><Gavel size={22} className="text-indigo-400"/> SmartAuction</div>
+              <div className="flex items-center gap-2 font-bold text-xl mb-3"><Gavel size={22} className="text-indigo-400" /> SmartAuction</div>
               <p className="text-gray-400 text-sm leading-relaxed">AI-powered online auction platform bringing intelligence to every bid.</p>
             </div>
             <div>
               <h4 className="font-semibold mb-3 text-gray-200 text-sm">Quick Links</h4>
               <div className="space-y-2">
-                {[{to:"/",l:"Home"},{to:"/auctions",l:"Auctions"},{to:"/how-it-works",l:"How It Works"},{to:"/leaderboard",l:"Leaderboard"}].map(({to,l})=>(
+                {[{ to: "/", l: "Home" }, { to: "/auctions", l: "Auctions" }, { to: "/how-it-works", l: "How It Works" }, { to: "/leaderboard", l: "Leaderboard" }].map(({ to, l }) => (
                   <Link key={to} to={to} className="block text-sm text-gray-400 hover:text-white transition-colors">{l}</Link>
                 ))}
               </div>
@@ -228,7 +231,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div>
               <h4 className="font-semibold mb-3 text-gray-200 text-sm">Categories</h4>
               <div className="space-y-2">
-                {["Electronics","Fashion","Furniture","Art","Collectibles","Jewelry"].map(c=>(
+                {["Electronics", "Fashion", "Furniture", "Art", "Collectibles", "Jewelry"].map(c => (
                   <Link key={c} to={`/auctions?category=${c}`} className="block text-sm text-gray-400 hover:text-white transition-colors">{c}</Link>
                 ))}
               </div>

@@ -29,7 +29,7 @@ export function fmtCountdown(t: TimeLeft): string {
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
 const WS_URL = (): string => {
-  const env = import.meta.env.VITE_WS_URL;
+  const env = (import.meta as any).env?.VITE_WS_URL;
   if (env) return env;
   return window.location.protocol === "https:" ? `wss://${window.location.host}` : `ws://localhost:5000`;
 };

@@ -90,7 +90,7 @@ const App: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector(s => s.auth);
 
-  useEffect(() => { dispatch(fetchProfile()); }, [dispatch]);
+  useEffect(() => { dispatch(fetchProfile(undefined)); }, [dispatch]);
 
   return (
     <Router>
