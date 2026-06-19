@@ -1,7 +1,7 @@
 import http from "http";
 import path from "path";
 import dotenv from "dotenv";
-dotenv.config({ path: path.join(__dirname, "config/config.env") });
+dotenv.config();
 
 import { v2 as cloudinary } from "cloudinary";
 import app from "./app";

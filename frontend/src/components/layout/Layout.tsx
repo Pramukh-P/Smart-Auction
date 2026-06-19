@@ -40,7 +40,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const handleLogout = async () => {
     await dispatch(logout(undefined));
     setUserOpen(false);
-    navigate("/login");
+    navigate("/");
     toast.success("Logged out successfully.");
   };
 
