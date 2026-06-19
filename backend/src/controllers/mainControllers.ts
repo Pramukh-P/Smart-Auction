@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Order, Notification, Commission, PaymentProof, ChatMessage } from "../models/index";
 import { Auction } from "../models/auctionSchema";
 import { User } from "../models/userSchema";
+import { Bid } from "../models/index";
 import { catchAsyncErrors } from "../middlewares/index";
 import ErrorHandler from "../middlewares/error";
 import { sendEmail, emailTemplates } from "../utils/sendEmail";

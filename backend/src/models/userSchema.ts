@@ -64,7 +64,13 @@ userSchema.pre<IUserDocument>("save", async function(next) {
 });
 userSchema.methods.comparePassword = async function(p: string) { return bcrypt.compare(p, this.password); };
 userSchema.methods.generateJsonWebToken = function() {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY as string, { expiresIn: process.env.JWT_EXPIRE || "7d" });
+  return jwt.sign(
+    { id: this._id.toString() },
+    process.env.JWT_SECRET_KEY as string,
+    {
+      expiresIn: (process.env.JWT_EXPIRE || "7d") as any
+    }
+  );
 };
 
 export const User: Model<IUserDocument> = mongoose.model<IUserDocument>("User", userSchema);
