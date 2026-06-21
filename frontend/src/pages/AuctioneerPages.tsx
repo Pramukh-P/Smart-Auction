@@ -10,45 +10,44 @@ import { useCountdown, fmtCountdown } from "../hooks/index";
 import { Auction, Order } from "../types";
 import api from "../lib/axios";
 
-const CATS = ["Electronics","Fashion","Furniture","Home & Garden","Music","Art","Collectibles","Sports","Books","Jewelry","Vehicles","Other"];
+const CATS = ["Electronics", "Fashion", "Furniture", "Home & Garden", "Music", "Art", "Collectibles", "Sports", "Books", "Jewelry", "Vehicles", "Other"];
 
 // ─── AuctionRow ───────────────────────────────────────────────────────────────
-const AuctionRow: React.FC<{ auction: Auction; onDelete: (id:string)=>void; onRepublish: (a:Auction)=>void }> = ({ auction, onDelete, onRepublish }) => {
+const AuctionRow: React.FC<{ auction: Auction; onDelete: (id: string) => void; onRepublish: (a: Auction) => void }> = ({ auction, onDelete, onRepublish }) => {
   const cd = useCountdown(auction.endTime);
   const isLive = auction.status === "active" && new Date(auction.startTime) <= new Date();
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-      <img src={auction.image?.url} alt={auction.title} className="w-16 h-16 rounded-xl object-cover border border-gray-100 flex-shrink-0"/>
+      <img src={auction.image?.url} alt={auction.title} className="w-16 h-16 rounded-xl object-cover border border-gray-100 flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to={`/auction/item/${auction._id}`} className="font-semibold text-gray-800 hover:text-indigo-600 text-sm truncate block">{auction.title}</Link>
             <p className="text-xs text-gray-400">{auction.category} · {auction.condition}</p>
           </div>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-            isLive ? "bg-green-100 text-green-700" :
-            auction.status==="active" ? "bg-amber-100 text-amber-700" :
-            auction.status==="ended" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-          }`}>{isLive?"Live":auction.status}</span>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${isLive ? "bg-green-100 text-green-700" :
+              auction.status === "active" ? "bg-amber-100 text-amber-700" :
+                auction.status === "ended" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+            }`}>{isLive ? "Live" : auction.status}</span>
         </div>
         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
           <span>Starting: ₹{auction.startingBid.toLocaleString()}</span>
-          <span className="font-semibold text-gray-700">Current: ₹{(auction.currentBid||auction.startingBid).toLocaleString()}</span>
-          <span>{auction.bids?.length||0} bids</span>
-          {auction.aiPricePrediction && <span className="flex items-center gap-0.5 text-indigo-500"><Sparkles size={9}/> ₹{auction.aiPricePrediction.toLocaleString()}</span>}
+          <span className="font-semibold text-gray-700">Current: ₹{(auction.currentBid || auction.startingBid).toLocaleString()}</span>
+          <span>{auction.bids?.length || 0} bids</span>
+          {auction.aiPricePrediction && <span className="flex items-center gap-0.5 text-indigo-500"><Sparkles size={9} /> ₹{auction.aiPricePrediction.toLocaleString()}</span>}
         </div>
         <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-400">
-          <Clock size={11}/>
-          {auction.status!=="active" ? "Auction ended" : cd.isExpired ? "Ended" : isLive ? fmtCountdown(cd) : `Starts ${new Date(auction.startTime).toLocaleDateString()}`}
+          <Clock size={11} />
+          {auction.status !== "active" ? "Auction ended" : cd.isExpired ? "Ended" : isLive ? fmtCountdown(cd) : `Starts ${new Date(auction.startTime).toLocaleDateString()}`}
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Link to={`/auction/item/${auction._id}`} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Eye size={15}/></Link>
-        {auction.status!=="active" && (
-          <button onClick={()=>onRepublish(auction)} className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Republish"><RefreshCw size={15}/></button>
+        <Link to={`/auction/item/${auction._id}`} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Eye size={15} /></Link>
+        {auction.status !== "active" && (
+          <button onClick={() => onRepublish(auction)} className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Republish"><RefreshCw size={15} /></button>
         )}
-        {(auction.bids?.length||0)===0 && (
-          <button onClick={()=>onDelete(auction._id)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15}/></button>
+        {(auction.bids?.length || 0) === 0 && (
+          <button onClick={() => onDelete(auction._id)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>
         )}
       </div>
     </div>
@@ -60,7 +59,7 @@ export const MyAuctions: React.FC = () => {
   const dispatch = useAppDispatch();
   const { myAuctions, loading, error, message } = useAppSelector(s => s.auction);
   const { user } = useAppSelector(s => s.auth);
-  const [republishAuc, setRepublishAuc] = useState<Auction|null>(null);
+  const [republishAuc, setRepublishAuc] = useState<Auction | null>(null);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -74,50 +73,50 @@ export const MyAuctions: React.FC = () => {
   };
 
   const handleRepublish = () => {
-    if (!republishAuc||!startTime||!endTime) { toast.error("Start and end time required."); return; }
+    if (!republishAuc || !startTime || !endTime) { toast.error("Start and end time required."); return; }
     dispatch(republishAuction({ id: republishAuc._id, data: { startTime, endTime } }));
   };
 
-  const live = myAuctions.filter(a => a.status==="active" && new Date(a.startTime)<=new Date());
-  const upcoming = myAuctions.filter(a => a.status==="active" && new Date(a.startTime)>new Date());
-  const ended = myAuctions.filter(a => a.status==="ended"||a.status==="completed");
+  const live = myAuctions.filter(a => a.status === "active" && new Date(a.startTime) <= new Date());
+  const upcoming = myAuctions.filter(a => a.status === "active" && new Date(a.startTime) > new Date());
+  const ended = myAuctions.filter(a => a.status === "ended" || a.status === "completed");
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Package size={24}/> My Auctions</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Package size={24} /> My Auctions</h1>
         <div className="flex items-center gap-3">
-          {user && user.unpaidCommission>0 && (
-            <Link to="/commission" className="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg flex items-center gap-1"><AlertCircle size={12}/> Pay ₹{user.unpaidCommission} commission</Link>
+          {user && user.unpaidCommission > 0 && (
+            <Link to="/commission" className="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg flex items-center gap-1"><AlertCircle size={12} /> Pay ₹{user.unpaidCommission} commission</Link>
           )}
-          <Link to="/create-auction" className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"><Plus size={16}/> Create Auction</Link>
+          <Link to="/create-auction" className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"><Plus size={16} /> Create Auction</Link>
         </div>
       </div>
 
-      {loading ? <div className="flex justify-center py-20"><Spinner size="h-10 w-10"/></div>
-      : myAuctions.length===0 ? <EmptyState title="No auctions yet" desc="Create your first auction to start selling" icon={<Package size={48}/>} action={{label:"Create Auction",to:"/create-auction"}}/>
-      : (
-        <div className="space-y-6">
-          {live.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">🔴 Live ({live.length})</h2>
-              <div className="space-y-3">{live.map(a=><AuctionRow key={a._id} auction={a} onDelete={handleDelete} onRepublish={setRepublishAuc}/>)}</div>
+      {loading ? <div className="flex justify-center py-20"><Spinner size="h-10 w-10" /></div>
+        : myAuctions.length === 0 ? <EmptyState title="No auctions yet" desc="Create your first auction to start selling" icon={<Package size={48} />} action={{ label: "Create Auction", to: "/create-auction" }} />
+          : (
+            <div className="space-y-6">
+              {live.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">🔴 Live ({live.length})</h2>
+                  <div className="space-y-3">{live.map(a => <AuctionRow key={a._id} auction={a} onDelete={handleDelete} onRepublish={setRepublishAuc} />)}</div>
+                </div>
+              )}
+              {upcoming.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">🕐 Upcoming ({upcoming.length})</h2>
+                  <div className="space-y-3">{upcoming.map(a => <AuctionRow key={a._id} auction={a} onDelete={handleDelete} onRepublish={setRepublishAuc} />)}</div>
+                </div>
+              )}
+              {ended.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">⚫ Ended ({ended.length})</h2>
+                  <div className="space-y-3">{ended.map(a => <AuctionRow key={a._id} auction={a} onDelete={handleDelete} onRepublish={setRepublishAuc} />)}</div>
+                </div>
+              )}
             </div>
           )}
-          {upcoming.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">🕐 Upcoming ({upcoming.length})</h2>
-              <div className="space-y-3">{upcoming.map(a=><AuctionRow key={a._id} auction={a} onDelete={handleDelete} onRepublish={setRepublishAuc}/>)}</div>
-            </div>
-          )}
-          {ended.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">⚫ Ended ({ended.length})</h2>
-              <div className="space-y-3">{ended.map(a=><AuctionRow key={a._id} auction={a} onDelete={handleDelete} onRepublish={setRepublishAuc}/>)}</div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Republish Modal */}
       {republishAuc && (
@@ -125,17 +124,17 @@ export const MyAuctions: React.FC = () => {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900">Republish Auction</h3>
-              <button onClick={()=>setRepublishAuc(null)}><X size={18} className="text-gray-400"/></button>
+              <button onClick={() => setRepublishAuc(null)}><X size={18} className="text-gray-400" /></button>
             </div>
             <p className="text-sm text-gray-600 mb-4">Set new times for <strong>{republishAuc.title}</strong></p>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
-                <input type="datetime-local" value={startTime} onChange={e=>setStartTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                <input type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
-                <input type="datetime-local" value={endTime} onChange={e=>setEndTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                <input type="datetime-local" value={endTime} onChange={e => setEndTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <button onClick={handleRepublish} className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-indigo-700">Republish Auction</button>
             </div>
@@ -152,22 +151,22 @@ export const CreateAuction: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector(s => s.auth);
   const { loading, error, message } = useAppSelector(s => s.auction);
-  const [image, setImage] = useState<File|null>(null);
-  const [preview, setPreview] = useState<string|null>(null);
-  const [form, setForm] = useState({ title:"", description:"", category:"Electronics", condition:"Used", startingBid:"", startTime:"", endTime:"" });
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", description: "", category: "Electronics", condition: "Used", startingBid: "", startTime: "", endTime: "" });
 
   useEffect(() => { if (error) { toast.error(error); dispatch(clearAuctionError()); } }, [error]);
   useEffect(() => { if (message) { toast.success(message); dispatch(clearAuctionMessage()); navigate("/my-auctions"); } }, [message]);
 
   if (user?.role !== "Auctioneer") return (
     <div className="min-h-screen flex items-center justify-center">
-      <EmptyState title="Auctioneers only" desc="Only auctioneers can create auctions." icon={<Package size={48}/>} action={{label:"Go Home",to:"/"}}/>
+      <EmptyState title="Auctioneers only" desc="Only auctioneers can create auctions." icon={<Package size={48} />} action={{ label: "Go Home", to: "/" }} />
     </div>
   );
 
   if (user.unpaidCommission > 0) return (
     <div className="max-w-lg mx-auto mt-20 p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center">
-      <AlertCircle size={40} className="text-amber-500 mx-auto mb-3"/>
+      <AlertCircle size={40} className="text-amber-500 mx-auto mb-3" />
       <h2 className="text-lg font-bold text-gray-800 mb-2">Unpaid Commission</h2>
       <p className="text-sm text-gray-600 mb-4">You have ₹{user.unpaidCommission.toLocaleString()} in unpaid commission. Please pay before creating a new auction.</p>
       <Link to="/commission" className="bg-amber-500 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-amber-600">Pay Commission</Link>
@@ -186,8 +185,26 @@ export const CreateAuction: React.FC = () => {
     if (new Date(form.startTime) < new Date()) { toast.error("Start time must be in the future."); return; }
     if (new Date(form.startTime) >= new Date(form.endTime)) { toast.error("End time must be after start time."); return; }
     const d = new FormData();
-    Object.entries(form).forEach(([k,v]) => d.append(k, v));
+
+    d.append("title", form.title);
+    d.append("description", form.description);
+    d.append("category", form.category);
+    d.append("condition", form.condition);
+    d.append("startingBid", form.startingBid);
+
+    // Convert local datetime to proper ISO UTC
+    d.append(
+      "startTime",
+      new Date(form.startTime).toISOString()
+    );
+
+    d.append(
+      "endTime",
+      new Date(form.endTime).toISOString()
+    );
+
     d.append("image", image);
+
     dispatch(createAuction(d));
   };
 
@@ -202,44 +219,44 @@ export const CreateAuction: React.FC = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Item Image *</label>
           <label className="cursor-pointer block">
-            <div className={`border-2 border-dashed rounded-xl h-52 flex flex-col items-center justify-center transition-colors overflow-hidden ${preview?"border-indigo-300":"border-gray-300 hover:border-indigo-400 hover:bg-gray-50"}`}>
-              {preview ? <img src={preview} alt="" className="w-full h-full object-contain p-1"/> : (
+            <div className={`border-2 border-dashed rounded-xl h-52 flex flex-col items-center justify-center transition-colors overflow-hidden ${preview ? "border-indigo-300" : "border-gray-300 hover:border-indigo-400 hover:bg-gray-50"}`}>
+              {preview ? <img src={preview} alt="" className="w-full h-full object-contain p-1" /> : (
                 <div className="text-center">
-                  <Upload size={32} className="text-gray-300 mx-auto mb-2"/>
+                  <Upload size={32} className="text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">Click to upload</p>
                   <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP · max 10MB</p>
                 </div>
               )}
             </div>
-            <input type="file" accept="image/*" onChange={handleImg} className="hidden"/>
+            <input type="file" accept="image/*" onChange={handleImg} className="hidden" />
           </label>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
-          <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} required placeholder="e.g. Vintage Leather Jacket 1970s"
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required placeholder="e.g. Vintage Leather Jacket 1970s"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Description *
-            <span className="ml-2 inline-flex items-center gap-1 text-xs text-indigo-600 font-normal"><Sparkles size={10}/> AI will enhance this</span>
+            <span className="ml-2 inline-flex items-center gap-1 text-xs text-indigo-600 font-normal"><Sparkles size={10} /> AI will enhance this</span>
           </label>
-          <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} required rows={3} placeholder="Describe your item — condition, history, unique features..."
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required rows={3} placeholder="Describe your item — condition, history, unique features..."
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Category *</label>
-            <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-              {CATS.map(c=><option key={c}>{c}</option>)}
+            <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+              {CATS.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Condition *</label>
-            <select value={form.condition} onChange={e=>setForm({...form,condition:e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+            <select value={form.condition} onChange={e => setForm({ ...form, condition: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
               <option value="New">New</option>
               <option value="Used">Used</option>
             </select>
@@ -250,31 +267,31 @@ export const CreateAuction: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Starting Bid (₹) *</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-            <input type="number" value={form.startingBid} onChange={e=>setForm({...form,startingBid:e.target.value})} required min={1} placeholder="100"
-              className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+            <input type="number" value={form.startingBid} onChange={e => setForm({ ...form, startingBid: e.target.value })} required min={1} placeholder="100"
+              className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Time *</label>
-            <input type="datetime-local" value={form.startTime} onChange={e=>setForm({...form,startTime:e.target.value})} required
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+            <input type="datetime-local" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })} required
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">End Time *</label>
-            <input type="datetime-local" value={form.endTime} onChange={e=>setForm({...form,endTime:e.target.value})} required
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+            <input type="datetime-local" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} required
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
         </div>
 
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-700 flex items-start gap-2">
-          <Sparkles size={14} className="flex-shrink-0 mt-0.5"/>
+          <Sparkles size={14} className="flex-shrink-0 mt-0.5" />
           <span>After creation, AI will automatically generate an enhanced description and price prediction. A 5% commission applies on successful sales.</span>
         </div>
 
         <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-          {loading ? <><Spinner size="h-4 w-4"/> Creating...</> : "Create Auction"}
+          {loading ? <><Spinner size="h-4 w-4" /> Creating...</> : "Create Auction"}
         </button>
       </form>
     </div>
@@ -285,8 +302,8 @@ export const CreateAuction: React.FC = () => {
 export const MySales: React.FC = () => {
   const dispatch = useAppDispatch();
   const { salesOrders, loading, error, message } = useAppSelector(s => s.order);
-  const [selected, setSelected] = useState<Order|null>(null);
-  const [shipForm, setShipForm] = useState({ courier:"", trackingId:"", notes:"" });
+  const [selected, setSelected] = useState<Order | null>(null);
+  const [shipForm, setShipForm] = useState({ courier: "", trackingId: "", notes: "" });
   const [showShip, setShowShip] = useState(false);
 
   useEffect(() => { dispatch(fetchSalesOrders(undefined)); }, [dispatch]);
@@ -294,60 +311,60 @@ export const MySales: React.FC = () => {
   useEffect(() => { if (message) { toast.success(message); dispatch(clearOrderMessage()); dispatch(fetchSalesOrders(undefined)); setShowShip(false); } }, [message]);
 
   const handleShip = () => {
-    if (!selected||!shipForm.courier||!shipForm.trackingId) { toast.error("Courier and tracking ID required."); return; }
+    if (!selected || !shipForm.courier || !shipForm.trackingId) { toast.error("Courier and tracking ID required."); return; }
     dispatch(shipOrder({ id: selected._id, data: shipForm }));
   };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2"><DollarSign size={24}/> My Sales</h1>
-      {loading ? <div className="flex justify-center py-20"><Spinner size="h-10 w-10"/></div>
-      : salesOrders.length===0 ? <EmptyState title="No sales yet" desc="When buyers win your auctions and pay, orders will appear here." icon={<DollarSign size={48}/>} action={{label:"My Auctions",to:"/my-auctions"}}/>
-      : (
-        <div className="space-y-4">
-          {salesOrders.map(o => {
-            const auc = typeof o.auction==="object" ? o.auction as any : null;
-            const winner = typeof o.winner==="object" ? o.winner as any : null;
-            return (
-              <div key={o._id} className="bg-white rounded-xl border border-gray-200 p-5">
-                <div className="flex items-start gap-4">
-                  <img src={auc?.image?.url||o.snapshot?.auctionImage||"https://via.placeholder.com/64"} alt="" className="w-16 h-16 rounded-xl object-cover border border-gray-100 flex-shrink-0"/>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-semibold text-gray-800 text-sm">{auc?.title||o.snapshot?.auctionTitle}</h3>
-                        <p className="text-xs text-gray-400">Order #{o._id.slice(-8).toUpperCase()}</p>
-                        {winner && <p className="text-xs text-gray-500 mt-0.5">Buyer: {winner.userName} · {winner.email}</p>}
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-gray-900">₹{o.price.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Payout: ₹{o.payoutAmount.toLocaleString()}</p>
-                        <div className="flex flex-col gap-1 mt-1 items-end">
-                          <OrderStatusBadge status={o.paymentStatus}/>
-                          <OrderStatusBadge status={o.deliveryStatus}/>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2"><DollarSign size={24} /> My Sales</h1>
+      {loading ? <div className="flex justify-center py-20"><Spinner size="h-10 w-10" /></div>
+        : salesOrders.length === 0 ? <EmptyState title="No sales yet" desc="When buyers win your auctions and pay, orders will appear here." icon={<DollarSign size={48} />} action={{ label: "My Auctions", to: "/my-auctions" }} />
+          : (
+            <div className="space-y-4">
+              {salesOrders.map(o => {
+                const auc = typeof o.auction === "object" ? o.auction as any : null;
+                const winner = typeof o.winner === "object" ? o.winner as any : null;
+                return (
+                  <div key={o._id} className="bg-white rounded-xl border border-gray-200 p-5">
+                    <div className="flex items-start gap-4">
+                      <img src={auc?.image?.url || o.snapshot?.auctionImage || "https://via.placeholder.com/64"} alt="" className="w-16 h-16 rounded-xl object-cover border border-gray-100 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-gray-800 text-sm">{auc?.title || o.snapshot?.auctionTitle}</h3>
+                            <p className="text-xs text-gray-400">Order #{o._id.slice(-8).toUpperCase()}</p>
+                            {winner && <p className="text-xs text-gray-500 mt-0.5">Buyer: {winner.userName} · {winner.email}</p>}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-bold text-gray-900">₹{o.price.toLocaleString()}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Payout: ₹{o.payoutAmount.toLocaleString()}</p>
+                            <div className="flex flex-col gap-1 mt-1 items-end">
+                              <OrderStatusBadge status={o.paymentStatus} />
+                              <OrderStatusBadge status={o.deliveryStatus} />
+                            </div>
+                          </div>
+                        </div>
+                        {o.shipmentDetails?.trackingId && (
+                          <p className="text-xs text-blue-600 mt-2 flex items-center gap-1"><Truck size={11} /> {o.shipmentDetails.courier} · {o.shipmentDetails.trackingId}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {o.paymentStatus === "paid" && o.deliveryStatus === "pending" && (
+                            <button onClick={() => { setSelected(o); setShowShip(true); }}
+                              className="text-xs bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1">
+                              <Truck size={11} /> Mark as Shipped
+                            </button>
+                          )}
+                          {o.payoutStatus === "done" && <span className="text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg flex items-center gap-1"><CheckCircle size={11} /> Payout sent ₹{o.payoutAmount.toLocaleString()}</span>}
+                          {o.payoutStatus === "failed" && <span className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">Payout failed. Contact support.</span>}
                         </div>
                       </div>
                     </div>
-                    {o.shipmentDetails?.trackingId && (
-                      <p className="text-xs text-blue-600 mt-2 flex items-center gap-1"><Truck size={11}/> {o.shipmentDetails.courier} · {o.shipmentDetails.trackingId}</p>
-                    )}
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {o.paymentStatus==="paid" && o.deliveryStatus==="pending" && (
-                        <button onClick={()=>{setSelected(o);setShowShip(true);}}
-                          className="text-xs bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1">
-                          <Truck size={11}/> Mark as Shipped
-                        </button>
-                      )}
-                      {o.payoutStatus==="done" && <span className="text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg flex items-center gap-1"><CheckCircle size={11}/> Payout sent ₹{o.payoutAmount.toLocaleString()}</span>}
-                      {o.payoutStatus==="failed" && <span className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">Payout failed. Contact support.</span>}
-                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                );
+              })}
+            </div>
+          )}
 
       {/* Ship Modal */}
       {showShip && selected && (
@@ -355,23 +372,23 @@ export const MySales: React.FC = () => {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900">Mark as Shipped</h3>
-              <button onClick={()=>setShowShip(false)}><X size={18} className="text-gray-400"/></button>
+              <button onClick={() => setShowShip(false)}><X size={18} className="text-gray-400" /></button>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Courier Name *</label>
-                <input value={shipForm.courier} onChange={e=>setShipForm({...shipForm,courier:e.target.value})} placeholder="e.g. DTDC, BlueDart, FedEx"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                <input value={shipForm.courier} onChange={e => setShipForm({ ...shipForm, courier: e.target.value })} placeholder="e.g. DTDC, BlueDart, FedEx"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Tracking ID *</label>
-                <input value={shipForm.trackingId} onChange={e=>setShipForm({...shipForm,trackingId:e.target.value})} placeholder="e.g. BD123456789IN"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+                <input value={shipForm.trackingId} onChange={e => setShipForm({ ...shipForm, trackingId: e.target.value })} placeholder="e.g. BD123456789IN"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
-                <textarea value={shipForm.notes} onChange={e=>setShipForm({...shipForm,notes:e.target.value})} rows={2} placeholder="Any delivery instructions..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+                <textarea value={shipForm.notes} onChange={e => setShipForm({ ...shipForm, notes: e.target.value })} rows={2} placeholder="Any delivery instructions..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
               </div>
               <button onClick={handleShip} className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-indigo-700">Confirm Shipment</button>
             </div>
@@ -385,8 +402,8 @@ export const MySales: React.FC = () => {
 // ─── Commission Proof ─────────────────────────────────────────────────────────
 export const CommissionProof: React.FC = () => {
   const { user } = useAppSelector(s => s.auth);
-  const [file, setFile] = useState<File|null>(null);
-  const [preview, setPreview] = useState<string|null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -396,7 +413,7 @@ export const CommissionProof: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) { toast.error("Please upload a payment screenshot."); return; }
-    if (!amount || Number(amount)<=0) { toast.error("Enter valid amount."); return; }
+    if (!amount || Number(amount) <= 0) { toast.error("Enter valid amount."); return; }
     if (Number(amount) > user.unpaidCommission) { toast.error(`Amount exceeds balance ₹${user.unpaidCommission}`); return; }
     setLoading(true);
     try {
@@ -405,7 +422,7 @@ export const CommissionProof: React.FC = () => {
       await api.post("/commission/proof", d);
       toast.success("Proof submitted. Admin will review within 24 hours.");
       setFile(null); setPreview(null); setAmount(""); setComment("");
-    } catch(e:any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
 
@@ -420,7 +437,7 @@ export const CommissionProof: React.FC = () => {
       </div>
       {user.unpaidCommission === 0 ? (
         <div className="text-center py-10 bg-green-50 border border-green-200 rounded-xl">
-          <CheckCircle size={40} className="text-green-500 mx-auto mb-2"/>
+          <CheckCircle size={40} className="text-green-500 mx-auto mb-2" />
           <p className="text-green-700 font-semibold">No outstanding commission!</p>
         </div>
       ) : (
@@ -428,24 +445,24 @@ export const CommissionProof: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Payment Screenshot *</label>
             <label className="cursor-pointer block">
-              <div className={`border-2 border-dashed rounded-xl h-40 flex items-center justify-center overflow-hidden transition-colors ${preview?"border-green-300":"border-gray-300 hover:border-indigo-400"}`}>
-                {preview ? <img src={preview} alt="" className="h-full w-full object-contain p-1"/> : <div className="text-center"><Upload size={28} className="text-gray-300 mx-auto mb-2"/><p className="text-sm text-gray-500">Upload payment screenshot</p></div>}
+              <div className={`border-2 border-dashed rounded-xl h-40 flex items-center justify-center overflow-hidden transition-colors ${preview ? "border-green-300" : "border-gray-300 hover:border-indigo-400"}`}>
+                {preview ? <img src={preview} alt="" className="h-full w-full object-contain p-1" /> : <div className="text-center"><Upload size={28} className="text-gray-300 mx-auto mb-2" /><p className="text-sm text-gray-500">Upload payment screenshot</p></div>}
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f){setFile(f);setPreview(URL.createObjectURL(f));}}}/>
+              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setPreview(URL.createObjectURL(f)); } }} />
             </label>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Paid (₹) *</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
-              <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} max={user.unpaidCommission} min={1} required
-                className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} max={user.unpaidCommission} min={1} required
+                className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Comment / Transaction ID *</label>
-            <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={2} required placeholder="Transaction ID or payment reference"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+            <textarea value={comment} onChange={e => setComment(e.target.value)} rows={2} required placeholder="Transaction ID or payment reference"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
           </div>
           <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-60">
             {loading ? "Submitting..." : "Submit Proof"}
