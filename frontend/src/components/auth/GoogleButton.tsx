@@ -22,6 +22,8 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ role }) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector(s => s.auth);
   const containerRef = useRef<HTMLDivElement>(null);
+  const roleRef = useRef(role);
+  roleRef.current = role;
   const [scriptReady, setScriptReady] = useState(false);
 
   useEffect(() => {
@@ -34,8 +36,12 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ role }) => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: CLIENT_ID,
+          // Read the latest role from the ref rather than closing over the
+          // prop, so we don't need to re-run `initialize()` (and trigger
+          // Google's "called multiple times" warning) every time the
+          // Bidder/Auctioneer toggle changes on the Register page.
           callback: (resp: { credential?: string }) => {
-            if (resp?.credential) dispatch(googleAuth({ credential: resp.credential, role }));
+            if (resp?.credential) dispatch(googleAuth({ credential: resp.credential, role: roleRef.current }));
           },
         });
         if (containerRef.current) {
@@ -55,7 +61,10 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ role }) => {
     };
     init();
     return () => { cancelled = true; };
-  }, [role, dispatch]);
+    // Run once per mount (Login vs Register are separate mounts/pages) —
+    // role toggling within Register is handled via roleRef above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch]);
 
   if (!CLIENT_ID) return null;
 

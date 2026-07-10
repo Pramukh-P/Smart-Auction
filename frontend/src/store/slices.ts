@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "../lib/axios";
+import { setToken, clearToken } from "../lib/authToken";
 import { AuthState, AuctionState, NotifState, OrderState, SiteRatingState } from "../types";
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
@@ -37,13 +38,14 @@ export const authSlice = createSlice({
   extraReducers: b => {
     const pend = (s: AuthState) => { s.loading = true; s.error = null; };
     const rej = (s: AuthState, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; };
+    const persistToken = (a: PayloadAction<any>) => { if (a.payload?.token) setToken(a.payload.token); };
     b.addCase(register.pending, pend).addCase(register.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(register.rejected, rej);
-    b.addCase(verifyOTP.pending, pend).addCase(verifyOTP.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(verifyOTP.rejected, rej);
+    b.addCase(verifyOTP.pending, pend).addCase(verifyOTP.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; persistToken(a); }).addCase(verifyOTP.rejected, rej);
     b.addCase(resendOTP.pending, pend).addCase(resendOTP.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resendOTP.rejected, rej);
-    b.addCase(login.pending, pend).addCase(login.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(login.rejected, rej);
-    b.addCase(googleAuth.pending, pend).addCase(googleAuth.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(googleAuth.rejected, rej);
-    b.addCase(logout.fulfilled, () => ({ ...authInit, authChecked: true })).addCase(logout.rejected, () => ({ ...authInit, authChecked: true }));
-    b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.authChecked = true; }).addCase(fetchProfile.rejected, s => { s.loading = false; s.isAuthenticated = false; s.user = null; s.authChecked = true; });
+    b.addCase(login.pending, pend).addCase(login.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; persistToken(a); }).addCase(login.rejected, rej);
+    b.addCase(googleAuth.pending, pend).addCase(googleAuth.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; persistToken(a); }).addCase(googleAuth.rejected, rej);
+    b.addCase(logout.fulfilled, () => { clearToken(); return { ...authInit, authChecked: true }; }).addCase(logout.rejected, () => { clearToken(); return { ...authInit, authChecked: true }; });
+    b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.authChecked = true; }).addCase(fetchProfile.rejected, s => { s.loading = false; s.isAuthenticated = false; s.user = null; s.authChecked = true; clearToken(); });
     b.addCase(updateProfile.pending, pend).addCase(updateProfile.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.message = a.payload.message; }).addCase(updateProfile.rejected, rej);
     b.addCase(forgotPassword.pending, pend).addCase(forgotPassword.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(forgotPassword.rejected, rej);
     b.addCase(resetPassword.pending, pend).addCase(resetPassword.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resetPassword.rejected, rej);
