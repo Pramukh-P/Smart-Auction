@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import { v2 as cloudinary } from "cloudinary";
+import { OAuth2Client } from "google-auth-library";
 import { User } from "../models/userSchema";
 import { Auction } from "../models/auctionSchema";
 import { catchAsyncErrors } from "../middlewares/index";
 import ErrorHandler from "../middlewares/error";
-import { generateToken } from "../utils/helpers";
+import { generateToken, isDeployed } from "../utils/helpers";
 import { sendEmail, emailTemplates } from "../utils/sendEmail";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const register = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
   if (!req.files?.profileImage) return next(new ErrorHandler("Profile image required.", 400));
@@ -62,15 +65,73 @@ export const login = catchAsyncErrors(async (req: Request, res: Response, next: 
   if (!user) return next(new ErrorHandler("Invalid credentials.", 401));
   if (!user.verified) return next(new ErrorHandler("Verify your email first.", 401));
   if (user.blocked) return next(new ErrorHandler("Account blocked. Contact support.", 403));
+  if (!user.password) return next(new ErrorHandler("This account was created with Google Sign-In. Please use \"Login with Google\" instead.", 400));
   if (!await user.comparePassword(password)) return next(new ErrorHandler("Invalid credentials.", 401));
   generateToken(user, "Login successful.", 200, res);
+});
+
+// ── Google Sign-In / Sign-Up ─────────────────────────────────────────────────
+// Used by both the Login page ("Login with Google" — no `role` sent, only
+// existing accounts can sign in) and the Register page ("Sign up with
+// Google" — `role` is sent from the role toggle, used only if a new account
+// needs to be created). If an account with that email already exists, this
+// always just logs the person in (and links the Google id if it wasn't
+// linked yet) regardless of which page triggered it.
+export const googleAuth = catchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
+  const { credential, role } = req.body;
+  if (!credential) return next(new ErrorHandler("Google credential missing.", 400));
+  if (!process.env.GOOGLE_CLIENT_ID) return next(new ErrorHandler("Google Sign-In is not configured on the server.", 500));
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+    payload = ticket.getPayload();
+  } catch (_err) {
+    return next(new ErrorHandler("Invalid or expired Google credential.", 401));
+  }
+  if (!payload?.email) return next(new ErrorHandler("Could not read your Google account email.", 400));
+  if (!payload.email_verified) return next(new ErrorHandler("Your Google email is not verified.", 400));
+
+  const email = payload.email.toLowerCase();
+  let user = await User.findOne({ email });
+
+  if (user) {
+    if (user.blocked) return next(new ErrorHandler("Account blocked. Contact support.", 403));
+    let changed = false;
+    if (!user.googleId) { user.googleId = payload.sub; changed = true; }
+    if (!user.verified) { user.verified = true; changed = true; }
+    if (changed) await user.save();
+    return generateToken(user, "Login successful.", 200, res);
+  }
+
+  // No account with this email yet — only create one if this came from the
+  // Register page (role provided). The Login page's Google button sends no
+  // role, so a non-existent account correctly errors out here instead of
+  // silently signing someone up.
+  if (!role || !["Bidder","Auctioneer"].includes(role)) {
+    return next(new ErrorHandler("No account found with this Google account. Please sign up first.", 404));
+  }
+
+  const userName = (payload.name || payload.email.split("@")[0]).slice(0, 40).padEnd(3, "_");
+  user = await User.create({
+    userName,
+    email,
+    role,
+    profileImage: { public_id: "google_oauth", url: payload.picture || "" },
+    verified: true,
+    authProvider: "google",
+    googleId: payload.sub
+  });
+
+  await sendEmail({ email: user.email, subject: "Welcome to SmartAuction!", message: `Hi ${user.userName}, your account is ready.`, html: emailTemplates.welcome(user.userName) });
+  generateToken(user, "Account created with Google. Welcome to SmartAuction!", 201, res);
 });
 
 export const logout = catchAsyncErrors(async (_req: any, res: Response) => {
   res.clearCookie("token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+    secure: isDeployed,
+    sameSite: isDeployed ? "none" : "lax"
   });
 
   res.status(200).json({

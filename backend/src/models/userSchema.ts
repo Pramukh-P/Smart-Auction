@@ -26,6 +26,8 @@ export interface IUserDocument extends Document {
   ratingSum: number;
   otp?: string;
   otpExpiry?: Date;
+  authProvider: "local" | "google";
+  googleId?: string;
   createdAt: Date;
   comparePassword(p: string): Promise<boolean>;
   generateJsonWebToken(): string;
@@ -54,6 +56,8 @@ const userSchema = new Schema<IUserDocument>({
   ratingSum: { type: Number, default: 0 },
   otp: String,
   otpExpiry: Date,
+  authProvider: { type: String, enum: ["local","google"], default: "local" },
+  googleId: { type: String, select: false, sparse: true, unique: true },
   createdAt: { type: Date, default: Date.now }
 });
 

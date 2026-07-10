@@ -97,8 +97,8 @@ const App: React.FC = () => {
       <Toaster position="top-right" toastOptions={{ duration: 4000, style: { fontSize:"14px", borderRadius:"10px" }, success: { iconTheme: { primary:"#6366f1", secondary:"#fff" } } }}/>
       <Routes>
         {/* Guest only */}
-        <Route path="/login" element={<GuestRoute><Login/></GuestRoute>}/>
-        <Route path="/register" element={<GuestRoute><Register/></GuestRoute>}/>
+        <Route path="/login" element={<GuestRoute><Layout><Login/></Layout></GuestRoute>}/>
+        <Route path="/register" element={<GuestRoute><Layout><Register/></Layout></GuestRoute>}/>
         <Route path="/verify-email" element={<GuestRoute><VerifyEmail/></GuestRoute>}/>
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword/></GuestRoute>}/>
 

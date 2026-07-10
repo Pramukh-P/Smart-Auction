@@ -21,6 +21,7 @@ export const register = at("register", "/users/register");
 export const verifyOTP = at("verifyOTP", "/users/verify-otp");
 export const resendOTP = at("resendOTP", "/users/resend-otp");
 export const login = at("login", "/users/login");
+export const googleAuth = at("googleAuth", "/users/google");
 export const logout = at("logout", "/users/logout", "get");
 export const fetchProfile = at("me", "/users/me", "get");
 export const updateProfile = at("update", "/users/me", "put");
@@ -40,6 +41,7 @@ export const authSlice = createSlice({
     b.addCase(verifyOTP.pending, pend).addCase(verifyOTP.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(verifyOTP.rejected, rej);
     b.addCase(resendOTP.pending, pend).addCase(resendOTP.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resendOTP.rejected, rej);
     b.addCase(login.pending, pend).addCase(login.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(login.rejected, rej);
+    b.addCase(googleAuth.pending, pend).addCase(googleAuth.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(googleAuth.rejected, rej);
     b.addCase(logout.fulfilled, () => ({ ...authInit, authChecked: true })).addCase(logout.rejected, () => ({ ...authInit, authChecked: true }));
     b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.authChecked = true; }).addCase(fetchProfile.rejected, s => { s.loading = false; s.isAuthenticated = false; s.user = null; s.authChecked = true; });
     b.addCase(updateProfile.pending, pend).addCase(updateProfile.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.message = a.payload.message; }).addCase(updateProfile.rejected, rej);

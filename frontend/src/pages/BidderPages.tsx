@@ -267,12 +267,13 @@ export const Profile: React.FC = () => {
   useEffect(() => { if (message) { toast.success(message); dispatch(clearMessage()); setEditing(false); } }, [message]);
 
   if (!user) return null;
-  const avgRating = user.ratingCount>0 ? (user.ratingSum/user.ratingCount).toFixed(1) : "—";
 
   const handleSave = () => {
     const d = new FormData();
     d.append("userName", form.userName); d.append("phone", form.phone); d.append("address", form.address);
-    d.append("paymentMethods", JSON.stringify({ upi:{upiId:form.upiId}, bankTransfer:{bankAccountNumber:form.bankAccountNumber,bankName:form.bankName} }));
+    if (user.role==="Auctioneer") {
+      d.append("paymentMethods", JSON.stringify({ upi:{upiId:form.upiId}, bankTransfer:{bankAccountNumber:form.bankAccountNumber,bankName:form.bankName} }));
+    }
     if (imgFile) d.append("profileImage", imgFile);
     dispatch(updateProfile(d));
   };
@@ -299,15 +300,6 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 divide-x divide-gray-100 border-b border-gray-100">
-          {[[user.auctionsWon,"Won"],[`₹${user.moneySpent?.toLocaleString()||0}`,"Spent"],[avgRating,"Rating"],[user.unpaidCommission>0?`₹${user.unpaidCommission}`:"₹0","Commission"]].map(([v,l])=>(
-            <div key={String(l)} className="px-4 py-3 text-center">
-              <p className="text-base font-bold text-gray-900">{v}</p>
-              <p className="text-xs text-gray-500">{l}</p>
-            </div>
-          ))}
-        </div>
-
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {[{k:"userName",l:"Username"},{k:"phone",l:"Phone"}].map(({k,l})=>(
@@ -321,13 +313,15 @@ export const Profile: React.FC = () => {
             <label className="block text-xs font-medium text-gray-500 mb-1">Address</label>
             {editing ? <input value={form.address} onChange={e=>setForm({...form,address:e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"/> : <p className="text-sm text-gray-800">{user.address||"—"}</p>}
           </div>
-          {(user.role==="Auctioneer"||user.role==="Bidder") && editing && (
+          {user.role==="Auctioneer" && (
             <div className="border border-gray-100 rounded-xl p-4 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Methods (for payouts)</p>
               {[{k:"upiId",l:"UPI ID",p:"yourname@upi"},{k:"bankAccountNumber",l:"Bank Account Number",p:"Account number"},{k:"bankName",l:"Bank Name",p:"Bank name"}].map(({k,l,p})=>(
                 <div key={k}>
                   <label className="block text-xs text-gray-500 mb-1">{l}</label>
-                  <input value={(form as any)[k]} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={p} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-indigo-500"/>
+                  {editing
+                    ? <input value={(form as any)[k]} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={p} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-indigo-500"/>
+                    : <p className="text-sm text-gray-800">{(form as any)[k]||"—"}</p>}
                 </div>
               ))}
             </div>

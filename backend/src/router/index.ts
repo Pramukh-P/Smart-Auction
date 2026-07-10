@@ -11,6 +11,7 @@ userRouter.post("/register", UC.register);
 userRouter.post("/verify-otp", UC.verifyOTP);
 userRouter.post("/resend-otp", UC.resendOTP);
 userRouter.post("/login", UC.login);
+userRouter.post("/google", UC.googleAuth);
 userRouter.get("/logout", isAuthenticated, UC.logout);
 userRouter.get("/me", isAuthenticated, UC.getProfile);
 userRouter.put("/me", isAuthenticated, UC.updateProfile);

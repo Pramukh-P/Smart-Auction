@@ -38,6 +38,17 @@
 
 import { Response } from "express";
 
+// Whether we're running on an actual deployment (as opposed to local dev).
+// We don't rely on NODE_ENV alone because it's easy to forget to set it in a
+// hosting dashboard — Render (and most PaaS providers) sets its own
+// platform env var on every deploy, so we check that too as a safety net.
+// This matters because the cookie needs `secure: true; sameSite: "none"` to
+// survive a cross-site request when the frontend (Vercel) and backend
+// (Render) are on different domains — with the wrong flags the browser
+// silently drops the cookie and the user gets logged out on refresh.
+const isDeployed = process.env.NODE_ENV === "production" || !!process.env.RENDER || !!process.env.RENDER_EXTERNAL_URL;
+export { isDeployed };
+
 export const generateToken = (user: any, message: string, statusCode: number, res: Response): void => {
   const token = user.generateJsonWebToken();
   const days = parseInt(process.env.COOKIE_EXPIRE || "7");
@@ -45,8 +56,8 @@ export const generateToken = (user: any, message: string, statusCode: number, re
     .cookie("token", token, {
       expires: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+      secure: isDeployed,
+      sameSite: isDeployed ? "none" : "lax"
     })
     .json({ success: true, message, user, token });
 };

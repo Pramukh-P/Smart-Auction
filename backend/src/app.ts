@@ -7,6 +7,11 @@ import { errorMiddleware } from "./middlewares/error";
 
 const app = express();
 
+// Render (and most PaaS providers) sit behind a reverse proxy that
+// terminates TLS. Without this, Express doesn't know the original request
+// was HTTPS, which can trip up anything that checks req.secure or client IPs.
+app.set("trust proxy", 1);
+
 // FRONTEND_URL may be a single URL or a comma-separated list (e.g. when you have
 // a staging + production frontend). Trailing slashes are stripped defensively.
 const ALLOWED = [
