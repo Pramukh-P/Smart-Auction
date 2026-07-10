@@ -76,8 +76,8 @@ const Chatbot: React.FC = () => {
             {messages.length === 0 && (
               <div className="text-center py-8">
                 <Bot size={32} className="text-indigo-200 mx-auto mb-2"/>
-                <p className="text-gray-500 text-sm font-medium">Hi! I'm your SmartAuction assistant.</p>
-                <p className="text-gray-400 text-xs mt-1">Ask me about auctions, bidding, payments, or anything else!</p>
+                <p className="text-gray-500 text-sm font-medium">Hi! I'm your SmartAuction support assistant.</p>
+                <p className="text-gray-400 text-xs mt-1">Ask me to track an order, or about bidding, payments, and more. I'll loop in our team if I can't solve it.</p>
                 <div className="mt-4 space-y-2">
                   {["How does bidding work?","When do auctions end?","How do I pay for a won item?"].map(q => (
                     <button key={q} onClick={() => { setInput(q); }} className="w-full text-left text-xs bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 transition-colors">{q}</button>

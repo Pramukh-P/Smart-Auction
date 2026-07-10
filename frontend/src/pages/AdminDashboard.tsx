@@ -18,14 +18,16 @@ const Stat: React.FC<{title:string;value:string|number;icon:React.ReactNode;colo
 );
 
 const AdminDashboard: React.FC = () => {
-  const [tab, setTab] = useState<"overview"|"users"|"proofs"|"auctions"|"complaints">("overview");
+  const [tab, setTab] = useState<"overview"|"users"|"commission"|"auctions"|"complaints">("overview");
   const [stats, setStats] = useState<any>(null);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [categoryStats, setCategoryStats] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [proofs, setProofs] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [commissionTotal, setCommissionTotal] = useState(0);
   const [auctions, setAuctions] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
+  const [chatComplaints, setChatComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadDashboard = async () => {
@@ -42,9 +44,12 @@ const AdminDashboard: React.FC = () => {
   const loadTab = async (t: string) => {
     try {
       if (t==="users") { const r = await api.get("/admin/users"); setUsers(r.data.users); }
-      if (t==="proofs") { const r = await api.get("/admin/proofs"); setProofs(r.data.proofs); }
+      if (t==="commission") { const r = await api.get("/admin/commissions"); setCommissions(r.data.commissions); setCommissionTotal(r.data.total); }
       if (t==="auctions") { const r = await api.get("/auctions"); setAuctions(r.data.items); }
-      if (t==="complaints") { const r = await api.get("/admin/complaints"); setComplaints(r.data.orders); }
+      if (t==="complaints") {
+        const [r1, r2] = await Promise.all([api.get("/admin/complaints"), api.get("/admin/chat-complaints")]);
+        setComplaints(r1.data.orders); setChatComplaints(r2.data.complaints);
+      }
     } catch(e:any) { toast.error(e.message); }
   };
 
@@ -63,9 +68,9 @@ const AdminDashboard: React.FC = () => {
     toast.success("User deleted."); loadTab("users");
   };
 
-  const updateProof = async (id: string, status: string, amount?: number) => {
-    await api.patch(`/admin/proofs/${id}`, { status, amount }).catch((e:any) => toast.error(e.message));
-    toast.success(`Proof ${status.toLowerCase()}.`); loadTab("proofs");
+  const resolveChatComplaint = async (id: string) => {
+    await api.patch(`/admin/chat-complaints/${id}/resolve`).catch((e:any) => toast.error(e.message));
+    toast.success("Complaint marked resolved."); loadTab("complaints");
   };
 
   const deleteAuction = async (id: string) => {
@@ -79,7 +84,7 @@ const AdminDashboard: React.FC = () => {
     toast.success(`Complaint ${action}.`); loadTab("complaints");
   };
 
-  const TABS = ["overview","users","proofs","auctions","complaints"] as const;
+  const TABS = ["overview","users","commission","auctions","complaints"] as const;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -105,14 +110,14 @@ const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Stat title="Total Auctions" value={stats.totalAuctions} icon={<Gavel size={18} className="text-indigo-600"/>} color="bg-indigo-50" sub={`${stats.activeAuctions} active`}/>
               <Stat title="Total Users" value={stats.totalUsers} icon={<Users size={18} className="text-blue-600"/>} color="bg-blue-50"/>
-              <Stat title="Total Revenue" value={`₹${(stats.totalRevenue||0).toLocaleString()}`} icon={<DollarSign size={18} className="text-green-600"/>} color="bg-green-50"/>
-              <Stat title="Open Issues" value={(stats.pendingProofs||0)+(stats.openComplaints||0)} icon={<AlertCircle size={18} className="text-amber-600"/>} color="bg-amber-50" sub={`${stats.pendingProofs} proofs · ${stats.openComplaints} complaints`}/>
+              <Stat title="Total Revenue" value={`₹${(stats.totalRevenue||0).toLocaleString()}`} icon={<DollarSign size={18} className="text-green-600"/>} color="bg-green-50" sub="Commission — 100% automatic"/>
+              <Stat title="Open Issues" value={(stats.openComplaints||0)+(stats.openChatComplaints||0)} icon={<AlertCircle size={18} className="text-amber-600"/>} color="bg-amber-50" sub={`${stats.openComplaints||0} orders · ${stats.openChatComplaints||0} chatbot`}/>
             </div>
 
-            {stats.pendingProofs > 0 && (
+            {stats.openChatComplaints > 0 && (
               <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
-                <AlertCircle size={16}/> {stats.pendingProofs} commission proof{stats.pendingProofs!==1?"s":""} pending review.
-                <button onClick={()=>setTab("proofs")} className="ml-1 underline text-xs">Review now</button>
+                <AlertCircle size={16}/> {stats.openChatComplaints} issue{stats.openChatComplaints!==1?"s":""} escalated by the support chatbot.
+                <button onClick={()=>setTab("complaints")} className="ml-1 underline text-xs">Review now</button>
               </div>
             )}
 
@@ -173,7 +178,6 @@ const AdminDashboard: React.FC = () => {
               <thead><tr className="bg-gray-50 text-left">
                 <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">User</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Commission</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Joined</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
@@ -188,7 +192,6 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role==="Super Admin"?"bg-purple-100 text-purple-700":u.role==="Auctioneer"?"bg-blue-100 text-blue-700":"bg-green-100 text-green-700"}`}>{u.role}</span></td>
-                    <td className="px-4 py-3">{u.unpaidCommission>0?<span className="text-red-600 font-semibold">₹{u.unpaidCommission}</span>:"₹0"}</td>
                     <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.blocked?"bg-red-100 text-red-700":"bg-green-100 text-green-700"}`}>{u.blocked?"Blocked":"Active"}</span></td>
                     <td className="px-4 py-3 text-xs text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
@@ -199,46 +202,35 @@ const AdminDashboard: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {users.length===0 && <tr><td colSpan={6} className="text-center py-10 text-gray-400">No users found</td></tr>}
+                {users.length===0 && <tr><td colSpan={5} className="text-center py-10 text-gray-400">No users found</td></tr>}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* PROOFS */}
-      {tab==="proofs" && (
+      {/* COMMISSION */}
+      {tab==="commission" && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-800">Commission Payment Proofs ({proofs.length})</h3></div>
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="font-semibold text-gray-800">Automatic Commission Log</h3>
+            <span className="text-sm font-bold text-green-600">₹{commissionTotal.toLocaleString()} total</span>
+          </div>
+          <p className="px-5 py-2 text-xs text-gray-400 bg-gray-50 border-b border-gray-100">Commission is deducted automatically from each auctioneer's payout at delivery confirmation — no manual review needed.</p>
           <div className="divide-y divide-gray-100">
-            {proofs.map(p=>(
-              <div key={p._id} className="p-5 flex items-start gap-4">
-                <a href={p.proof?.url} target="_blank" rel="noopener noreferrer">
-                  <img src={p.proof?.url} alt="proof" className="w-20 h-16 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"/>
-                </a>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-gray-800 text-sm">{p.userId?.userName}</p>
-                      <p className="text-xs text-gray-400">{p.userId?.email}</p>
-                      <p className="text-xs text-gray-600 mt-1">Amount: <span className="font-semibold">₹{p.amount?.toLocaleString()}</span> · Balance: <span className="text-red-600 font-semibold">₹{p.userId?.unpaidCommission?.toLocaleString()}</span></p>
-                      {p.comment && <p className="text-xs text-gray-500 mt-0.5">{p.comment}</p>}
-                      <p className="text-xs text-gray-400 mt-1">{new Date(p.uploadedAt).toLocaleString()}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.status==="Approved"?"bg-green-100 text-green-700":p.status==="Rejected"?"bg-red-100 text-red-700":p.status==="Settled"?"bg-blue-100 text-blue-700":"bg-amber-100 text-amber-700"}`}>{p.status}</span>
-                      {p.status==="Pending" && (
-                        <div className="flex gap-2">
-                          <button onClick={()=>updateProof(p._id,"Approved",p.amount)} className="text-xs text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg flex items-center gap-1"><CheckCircle size={11}/>Approve</button>
-                          <button onClick={()=>updateProof(p._id,"Rejected")} className="text-xs text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg flex items-center gap-1"><X size={11}/>Reject</button>
-                        </div>
-                      )}
-                    </div>
+            {commissions.map(c=>(
+              <div key={c._id} className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  {c.auction?.image?.url && <img src={c.auction.image.url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0"/>}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{c.auction?.title || "Auction sale"}</p>
+                    <p className="text-xs text-gray-400">{c.auctioneer?.userName} · {new Date(c.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
+                <p className="text-sm font-semibold text-gray-900 flex-shrink-0">₹{c.amount.toLocaleString()}</p>
               </div>
             ))}
-            {proofs.length===0 && <p className="text-center py-12 text-gray-400">No payment proofs submitted</p>}
+            {commissions.length===0 && <p className="text-center py-12 text-gray-400">No commission recorded yet</p>}
           </div>
         </div>
       )}
@@ -282,8 +274,29 @@ const AdminDashboard: React.FC = () => {
 
       {/* COMPLAINTS */}
       {tab==="complaints" && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-800">Open Complaints ({complaints.length})</h3></div>
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-800">Chatbot-Escalated Issues ({chatComplaints.length})</h3></div>
+            <div className="divide-y divide-gray-100">
+              {chatComplaints.map((c:any)=>(
+                <div key={c._id} className="p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{c.userName}</p>
+                      <p className="text-xs text-gray-400">{c.email}</p>
+                    </div>
+                    <button onClick={()=>resolveChatComplaint(c._id)} className="text-xs text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg flex items-center gap-1 flex-shrink-0"><CheckCircle size={11}/>Mark Resolved</button>
+                  </div>
+                  <pre className="mt-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap font-sans">{c.details}</pre>
+                  <p className="text-xs text-gray-400 mt-1">{new Date(c.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+              {chatComplaints.length===0 && <p className="text-center py-10 text-gray-400">No chatbot escalations 🎉</p>}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100"><h3 className="font-semibold text-gray-800">Open Order Complaints ({complaints.length})</h3></div>
           <div className="divide-y divide-gray-100">
             {complaints.map((o:any)=>{
               const auc = typeof o.auction==="object"?o.auction:null;
@@ -315,7 +328,8 @@ const AdminDashboard: React.FC = () => {
                 </div>
               );
             })}
-            {complaints.length===0 && <p className="text-center py-12 text-gray-400">No open complaints 🎉</p>}
+            {complaints.length===0 && <p className="text-center py-12 text-gray-400">No open order complaints 🎉</p>}
+          </div>
           </div>
         </div>
       )}

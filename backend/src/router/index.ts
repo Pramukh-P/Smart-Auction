@@ -24,6 +24,7 @@ userRouter.get("/wishlist", isAuthenticated, UC.getWishlist);
 // ── Auction Routes ────────────────────────────────────────────────────────────
 export const auctionRouter = express.Router();
 auctionRouter.get("/", AC.getAllAuctions);
+auctionRouter.get("/meta/category-counts", AC.getCategoryCounts);
 auctionRouter.get("/:id", AC.getAuctionById);
 auctionRouter.post("/", isAuthenticated, isAuthorized("Auctioneer"), trackCommissionStatus, AC.createAuction);
 auctionRouter.delete("/:id", isAuthenticated, AC.deleteAuction);
@@ -43,10 +44,16 @@ orderRouter.get("/sales", isAuthenticated, isAuthorized("Auctioneer"), MC.getMyS
 orderRouter.get("/:id", isAuthenticated, MC.getOrderById);
 orderRouter.put("/:id/ship", isAuthenticated, isAuthorized("Auctioneer"), MC.shipOrder);
 orderRouter.put("/:id/deliver", isAuthenticated, isAuthorized("Bidder"), MC.confirmDelivery);
+orderRouter.post("/:id/retry-payout", isAuthenticated, isAuthorized("Auctioneer"), MC.retryPayout);
 orderRouter.post("/:id/complaint", isAuthenticated, MC.raiseComplaint);
 orderRouter.post("/:id/rate", isAuthenticated, isAuthorized("Bidder"), MC.submitRating);
 orderRouter.post("/payment/create", isAuthenticated, MC.createRazorpayOrder);
 orderRouter.post("/payment/verify", isAuthenticated, MC.verifyPayment);
+
+// ── Site Rating Routes ────────────────────────────────────────────────────────
+export const siteRatingRouter = express.Router();
+siteRatingRouter.get("/me", isAuthenticated, MC.getMySiteRating);
+siteRatingRouter.post("/", isAuthenticated, MC.submitSiteRating);
 
 // ── Notification Routes ───────────────────────────────────────────────────────
 export const notifRouter = express.Router();
@@ -55,8 +62,11 @@ notifRouter.put("/seen", isAuthenticated, MC.markAllSeen);
 notifRouter.delete("/:id", isAuthenticated, MC.deleteNotification);
 
 // ── Commission Routes ─────────────────────────────────────────────────────────
+// Commission is now fully automatic (deducted from payout at delivery confirmation).
+// The proof-upload route is kept only for backward compatibility and is unused by the UI.
 export const commissionRouter = express.Router();
 commissionRouter.post("/proof", isAuthenticated, isAuthorized("Auctioneer"), MC.submitCommissionProof);
+commissionRouter.get("/my", isAuthenticated, isAuthorized("Auctioneer"), MC.getMyCommissions);
 
 // ── Chatbot Routes ────────────────────────────────────────────────────────────
 export const chatRouter = express.Router();
@@ -76,4 +86,7 @@ adminRouter.get("/proofs", MC.adminGetProofs);
 adminRouter.patch("/proofs/:id", MC.adminUpdateProof);
 adminRouter.get("/complaints", MC.adminGetComplaints);
 adminRouter.patch("/complaints/:id/resolve", MC.adminResolveComplaint);
+adminRouter.get("/chat-complaints", MC.adminGetChatComplaints);
+adminRouter.patch("/chat-complaints/:id/resolve", MC.adminResolveChatComplaint);
+adminRouter.get("/commissions", MC.adminGetCommissions);
 adminRouter.delete("/auctions/:id", MC.adminDeleteAuction);

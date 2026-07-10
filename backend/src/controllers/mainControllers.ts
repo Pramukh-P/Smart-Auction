@@ -1,15 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
-import { Order, Notification, Commission, PaymentProof, ChatMessage } from "../models/index";
+import { Order, Notification, Commission, PaymentProof, ChatMessage, ChatComplaint, SiteRating } from "../models/index";
 import { Auction } from "../models/auctionSchema";
 import { User } from "../models/userSchema";
 import { Bid } from "../models/index";
 import { catchAsyncErrors } from "../middlewares/index";
 import ErrorHandler from "../middlewares/error";
 import { sendEmail, emailTemplates } from "../utils/sendEmail";
-import { sendPayoutToAuctioneer } from "../utils/helpers";
+// import { sendPayoutToAuctioneer } from "../utils/helpers";
 import { chatWithAI } from "../utils/aiHelpers";
 import { v2 as cloudinary } from "cloudinary";
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "app.smartauctions@gmail.com";
 
 const pop = (q: any) => q
   .populate("auction","title image category status")
@@ -68,6 +70,100 @@ export const shipOrder = catchAsyncErrors(async (req: any, res: Response, next: 
   res.status(200).json({ success: true, message: "Order shipped. Buyer notified.", order });
 });
 
+// Commission belongs to the platform the instant a sale is delivered — it must
+// never depend on whether we could also successfully pay out the auctioneer's
+// share (e.g. because they haven't added a UPI ID yet). This records it exactly
+// once per order, however many times payout is attempted/retried.
+const recordCommissionIfMissing = async (order: any, auctioneerId: any) => {
+  if (!(order.commissionAmount > 0)) return;
+  const exists = await Commission.findOne({ order: order._id });
+  if (exists) return;
+  await Commission.create({
+    amount: order.commissionAmount, order: order._id,
+    auction: (order.auction as any)?._id || order.auction,
+    auctioneer: auctioneerId, source: "Auto Payout"
+  });
+};
+
+// Attempts (or retries) sending the auctioneer their net payout for an already-
+// delivered order, and emails/notifies them on success. Commission is handled
+// separately by recordCommissionIfMissing so it's never blocked by this.
+
+
+// const attemptPayout = async (order: any, auctioneer: any) => {
+//   const upiId = auctioneer.paymentMethods?.upi?.upiId;
+//   const result = await sendPayoutToAuctioneer(upiId, order.payoutAmount, String(order._id));
+//   order.payoutStatus = "done";
+//   order.payoutTxId = result.txId;
+//   order.payoutError = undefined;
+//   order.deliveryStatus = "completed";
+//   await order.save();
+
+//   await Auction.findByIdAndUpdate((order.auction as any)?._id || order.auction, { payoutReleased: true, deliveryStatus: "Completed", paymentStatus: "paid" });
+
+//   const auctionTitle = (order.auction as any)?.title || "auction item";
+//   if (auctioneer.email) {
+//     await sendEmail({ email: auctioneer.email, subject: `Payout sent: ₹${order.payoutAmount.toLocaleString()}`, message: `Your payout of ₹${order.payoutAmount.toLocaleString()} for "${auctionTitle}" has been processed.\nTx ID: ${result.txId}` });
+//   }
+//   await Notification.create({
+//     user: auctioneer._id, type: "payment",
+//     message: `💰 Payout of ₹${order.payoutAmount.toLocaleString()} sent for "${auctionTitle}"`,
+//     link: `/my-auctions`
+//   });
+// };
+
+const attemptPayout = async (order: any, auctioneer: any) => {
+
+  // Simulated payout because SmartAuction uses only Razorpay Payment Gateway.
+  // The commission has already been deducted while creating payoutAmount.
+
+  const txId = `SIM_${Date.now()}`;
+
+  order.payoutStatus = "done";
+  order.payoutTxId = txId;
+  order.payoutError = undefined;
+  order.deliveryStatus = "completed";
+
+  await order.save();
+
+  await Auction.findByIdAndUpdate(
+    (order.auction as any)?._id || order.auction,
+    {
+      payoutReleased: true,
+      deliveryStatus: "Completed",
+      paymentStatus: "paid"
+    }
+  );
+
+  const auctionTitle =
+    (order.auction as any)?.title || "auction item";
+
+  if (auctioneer.email) {
+    await sendEmail({
+      email: auctioneer.email,
+      subject: `Payout Recorded Successfully`,
+      message:
+`Buyer Payment : ₹${order.price.toLocaleString()}
+
+Commission Deducted : ₹${order.commissionAmount.toLocaleString()}
+
+Amount Credited : ₹${order.payoutAmount.toLocaleString()}
+
+Transaction ID : ${txId}
+
+Thank you for using SmartAuction.`
+    });
+  }
+
+  await Notification.create({
+    user: auctioneer._id,
+    type: "payment",
+    message: `₹${order.payoutAmount.toLocaleString()} credited (Simulated)`,
+    link: "/my-sales"
+  });
+
+};
+
 export const confirmDelivery = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
   const order = await pop(Order.findById(req.params.id));
   if (!order) return next(new ErrorHandler("Order not found.", 404));
@@ -81,36 +177,48 @@ export const confirmDelivery = catchAsyncErrors(async (req: any, res: Response, 
 
   const auctioneer = await User.findById((order.auctioneer as any)?._id || order.auctioneer);
   if (auctioneer) {
+    // The platform's commission is recorded immediately — it does not wait on payout.
+    await recordCommissionIfMissing(order, auctioneer._id);
     try {
-      const upiId = auctioneer.paymentMethods?.upi?.upiId;
-      const result = await sendPayoutToAuctioneer(upiId, order.payoutAmount, String(order._id));
-      order.payoutStatus = "done";
-      order.payoutTxId = result.txId;
-      order.deliveryStatus = "completed";
-      await order.save();
-
-      await Auction.findByIdAndUpdate((order.auction as any)?._id || order.auction, { payoutReleased: true, deliveryStatus: "Completed", paymentStatus: "paid" });
-
-      if (order.commissionAmount > 0) {
-        await Commission.create({ amount: order.commissionAmount, order: order._id, auction: (order.auction as any)?._id || order.auction, auctioneer: auctioneer._id, source: "Auto Payout" });
-      }
-
-      const auctionTitle = (order.auction as any)?.title || "auction item";
-      if (auctioneer.email) {
-        await sendEmail({ email: auctioneer.email, subject: `Payout sent: ₹${order.payoutAmount.toLocaleString()}`, message: `Your payout of ₹${order.payoutAmount.toLocaleString()} for "${auctionTitle}" has been processed.\nTx ID: ${result.txId}` });
-      }
-      await Notification.create({
-        user: auctioneer._id, type: "payment",
-        message: `💰 Payout of ₹${order.payoutAmount.toLocaleString()} sent for "${auctionTitle}"`,
-        link: `/my-auctions`
-      });
+      await attemptPayout(order, auctioneer);
     } catch (err: any) {
       order.payoutStatus = "failed";
-      order.payoutError = err.message;
+      order.payoutError = /UPI ID required/i.test(err.message)
+        ? "Add your UPI ID in Profile settings to receive automatic payouts."
+        : err.message;
       await order.save();
     }
   }
-  res.status(200).json({ success: true, message: "Delivery confirmed. Payout initiated.", order });
+  res.status(200).json({ success: true, message: "Delivery confirmed. Commission recorded, payout initiated.", order });
+});
+
+// Lets an auctioneer retry a payout that previously failed (e.g. after adding
+// their UPI ID). Commission was already recorded at delivery time regardless.
+export const retryPayout = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
+  const order = await pop(Order.findById(req.params.id));
+  if (!order) return next(new ErrorHandler("Order not found.", 404));
+  const auctioneerId = (order.auctioneer as any)?._id?.toString();
+  if (auctioneerId !== String(req.user._id)) return next(new ErrorHandler("Only the seller can retry this payout.", 403));
+  if (order.payoutStatus === "done") return next(new ErrorHandler("Payout already completed.", 400));
+  if (!["delivered", "completed"].includes(order.deliveryStatus)) return next(new ErrorHandler("Order must be delivered before payout.", 400));
+
+  const auctioneer = await User.findById(req.user._id);
+  if (!auctioneer) return next(new ErrorHandler("Auctioneer not found.", 404));
+
+  await recordCommissionIfMissing(order, auctioneer._id);
+  order.payoutStatus = "processing";
+  await order.save();
+  try {
+    await attemptPayout(order, auctioneer);
+    res.status(200).json({ success: true, message: "Payout sent successfully.", order });
+  } catch (err: any) {
+    order.payoutStatus = "failed";
+    order.payoutError = /UPI ID required/i.test(err.message)
+      ? "Add your UPI ID in Profile settings to receive automatic payouts."
+      : err.message;
+    await order.save();
+    return next(new ErrorHandler(order.payoutError, 400));
+  }
 });
 
 export const raiseComplaint = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
@@ -247,6 +355,16 @@ export const submitCommissionProof = catchAsyncErrors(async (req: any, res: Resp
   res.status(201).json({ success: true, message: "Proof submitted. Admin will review within 24 hours.", proof });
 });
 
+// Commission is now deducted automatically from the auctioneer's payout at delivery
+// confirmation (see confirmDelivery) and sent straight to the platform — no manual
+// payment or proof upload is required any more. This endpoint just surfaces that
+// automatic history to the auctioneer.
+export const getMyCommissions = catchAsyncErrors(async (req: any, res: Response) => {
+  const commissions = await Commission.find({ auctioneer: req.user._id }).sort({ createdAt: -1 }).populate("auction", "title image");
+  const total = commissions.reduce((sum, c) => sum + c.amount, 0);
+  res.status(200).json({ success: true, commissions, total });
+});
+
 // ── CHATBOT ───────────────────────────────────────────────────────────────────
 export const chatbotMessage = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
   const { message } = req.body;
@@ -257,7 +375,18 @@ export const chatbotMessage = catchAsyncErrors(async (req: any, res: Response, n
     .sort({ createdAt: -1 }).limit(10).lean();
   const formatted = history.reverse().map(m => ({ role: m.role as "user"|"assistant", content: m.content }));
 
-  const reply = await chatWithAI(message.trim(), formatted);
+  // Give the bot order-tracking context so it can answer directly
+  const recentOrders = await Order.find({ $or: [{ winner: req.user._id }, { auctioneer: req.user._id }] })
+    .sort({ createdAt: -1 }).limit(5)
+    .populate("auction", "title");
+  const orderContext = recentOrders.map(o => ({
+    title: (o.auction as any)?.title || o.snapshot?.auctionTitle || "item",
+    deliveryStatus: o.deliveryStatus, paymentStatus: o.paymentStatus,
+    trackingId: o.shipmentDetails?.trackingId, courier: o.shipmentDetails?.courier,
+    price: o.price
+  }));
+
+  const { reply, escalate } = await chatWithAI(message.trim(), formatted, { userName: req.user.userName, recentOrders: orderContext });
 
   // Save both messages
   await ChatMessage.create([
@@ -265,7 +394,21 @@ export const chatbotMessage = catchAsyncErrors(async (req: any, res: Response, n
     { user: req.user._id, role: "assistant", content: reply }
   ]);
 
-  res.status(200).json({ success: true, reply });
+  if (escalate) {
+    try {
+      await ChatComplaint.create({
+        user: req.user._id, userName: req.user.userName, email: req.user.email,
+        details: `User message: ${message.trim()}\n\nBot response: ${reply}`
+      });
+      await sendEmail({
+        email: ADMIN_EMAIL,
+        subject: `Chatbot escalation from ${req.user.userName}`,
+        message: `A user's issue could not be resolved by the SmartAuction AI assistant and needs human follow-up.\n\nUser: ${req.user.userName} (${req.user.email})\n\nMessage: ${message.trim()}\n\nBot reply: ${reply}`
+      });
+    } catch (_) { /* never block the chat reply on escalation failures */ }
+  }
+
+  res.status(200).json({ success: true, reply, escalated: escalate });
 });
 
 export const getChatHistory = catchAsyncErrors(async (req: any, res: Response) => {
@@ -281,12 +424,12 @@ export const clearChatHistory = catchAsyncErrors(async (req: any, res: Response)
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 export const adminGetDashboard = catchAsyncErrors(async (_req: any, res: Response) => {
   const { Auction } = require("../models/auctionSchema");
-  const [totalUsers, totalAuctions, activeAuctions, pendingProofs, openComplaints, revenueData, recentActivity] = await Promise.all([
+  const [totalUsers, totalAuctions, activeAuctions, openComplaints, openChatComplaints, revenueData, recentActivity] = await Promise.all([
     User.countDocuments(),
     Auction.countDocuments(),
     Auction.countDocuments({ status: "active" }),
-    PaymentProof.countDocuments({ status: "Pending" }),
     Order.countDocuments({ complaintStatus: "open" }),
+    ChatComplaint.countDocuments({ status: "open" }),
     Commission.aggregate([{ $group: { _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } }, total: { $sum: "$amount" }, count: { $sum: 1 } } }, { $sort: { "_id.year": -1, "_id.month": -1 } }, { $limit: 12 }]),
     Notification.find().sort({ createdAt: -1 }).limit(10)
   ]);
@@ -295,7 +438,7 @@ export const adminGetDashboard = catchAsyncErrors(async (_req: any, res: Respons
 
   res.status(200).json({
     success: true,
-    stats: { totalUsers, totalAuctions, activeAuctions, totalRevenue: totalRevenue[0]?.total || 0, pendingProofs, openComplaints },
+    stats: { totalUsers, totalAuctions, activeAuctions, totalRevenue: totalRevenue[0]?.total || 0, openComplaints, openChatComplaints },
     revenueData, categoryStats, recentActivity
   });
 });
@@ -366,6 +509,28 @@ export const adminResolveComplaint = catchAsyncErrors(async (req: any, res: Resp
   res.status(200).json({ success: true, message: `Complaint ${action}.` });
 });
 
+// All commission is automatic now — this just lists recent Commission entries
+// across every auctioneer so admin can audit platform revenue at a glance.
+export const adminGetCommissions = catchAsyncErrors(async (_req: any, res: Response) => {
+  const commissions = await Commission.find().sort({ createdAt: -1 }).limit(100)
+    .populate("auctioneer", "userName email").populate("auction", "title image");
+  const total = await Commission.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]);
+  res.status(200).json({ success: true, commissions, total: total[0]?.total || 0 });
+});
+
+export const adminGetChatComplaints = catchAsyncErrors(async (_req: any, res: Response) => {
+  const complaints = await ChatComplaint.find({ status: "open" }).sort({ createdAt: -1 });
+  res.status(200).json({ success: true, complaints });
+});
+
+export const adminResolveChatComplaint = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
+  const complaint = await ChatComplaint.findById(req.params.id);
+  if (!complaint) return next(new ErrorHandler("Complaint not found.", 404));
+  complaint.status = "resolved";
+  await complaint.save();
+  res.status(200).json({ success: true, message: "Complaint marked resolved." });
+});
+
 export const adminDeleteAuction = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
   const auction = await Auction.findById(req.params.id);
   if (!auction) return next(new ErrorHandler("Auction not found.", 404));
@@ -374,4 +539,26 @@ export const adminDeleteAuction = catchAsyncErrors(async (req: any, res: Respons
   if (auction.image?.public_id) await cloudinary.uploader.destroy(auction.image.public_id).catch(() => {});
   await auction.deleteOne();
   res.status(200).json({ success: true, message: "Auction deleted by admin." });
+});
+
+// ── SITE RATING ──────────────────────────────────────────────────────────────
+// Logged-in users rate the platform once (User Satisfaction, AI Features,
+// Chatbot Assistance, each 1-5). Shown on the Home page in place of the
+// "Ready to start bidding?" CTA once the user is authenticated.
+export const getMySiteRating = catchAsyncErrors(async (req: any, res: Response) => {
+  const rating = await SiteRating.findOne({ user: req.user._id });
+  res.status(200).json({ success: true, rating });
+});
+
+export const submitSiteRating = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
+  const existing = await SiteRating.findOne({ user: req.user._id });
+  if (existing) return next(new ErrorHandler("You've already rated SmartAuction. Thanks for your feedback!", 400));
+
+  const { userSatisfaction, aiFeatures, chatbotAssistance } = req.body;
+  for (const v of [userSatisfaction, aiFeatures, chatbotAssistance]) {
+    if (typeof v !== "number" || v < 1 || v > 5) return next(new ErrorHandler("All three ratings must be between 1 and 5.", 400));
+  }
+
+  const rating = await SiteRating.create({ user: req.user._id, userSatisfaction, aiFeatures, chatbotAssistance });
+  res.status(201).json({ success: true, message: "Thanks for rating SmartAuction!", rating });
 });

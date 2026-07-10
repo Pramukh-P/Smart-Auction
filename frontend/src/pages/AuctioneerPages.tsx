@@ -9,6 +9,7 @@ import { Spinner, EmptyState, OrderStatusBadge } from "../components/ui/index";
 import { useCountdown, fmtCountdown } from "../hooks/index";
 import { Auction, Order } from "../types";
 import api from "../lib/axios";
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 
 const CATS = ["Electronics", "Fashion", "Furniture", "Home & Garden", "Music", "Art", "Collectibles", "Sports", "Books", "Jewelry", "Vehicles", "Other"];
 
@@ -86,9 +87,7 @@ export const MyAuctions: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Package size={24} /> My Auctions</h1>
         <div className="flex items-center gap-3">
-          {user && user.unpaidCommission > 0 && (
-            <Link to="/commission" className="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg flex items-center gap-1"><AlertCircle size={12} /> Pay ₹{user.unpaidCommission} commission</Link>
-          )}
+          <Link to="/commission" className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-gray-200 transition-colors"><DollarSign size={12} /> Commission</Link>
           <Link to="/create-auction" className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"><Plus size={16} /> Create Auction</Link>
         </div>
       </div>
@@ -161,15 +160,6 @@ export const CreateAuction: React.FC = () => {
   if (user?.role !== "Auctioneer") return (
     <div className="min-h-screen flex items-center justify-center">
       <EmptyState title="Auctioneers only" desc="Only auctioneers can create auctions." icon={<Package size={48} />} action={{ label: "Go Home", to: "/" }} />
-    </div>
-  );
-
-  if (user.unpaidCommission > 0) return (
-    <div className="max-w-lg mx-auto mt-20 p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center">
-      <AlertCircle size={40} className="text-amber-500 mx-auto mb-3" />
-      <h2 className="text-lg font-bold text-gray-800 mb-2">Unpaid Commission</h2>
-      <p className="text-sm text-gray-600 mb-4">You have ₹{user.unpaidCommission.toLocaleString()} in unpaid commission. Please pay before creating a new auction.</p>
-      <Link to="/commission" className="bg-amber-500 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-amber-600">Pay Commission</Link>
     </div>
   );
 
@@ -315,9 +305,83 @@ export const MySales: React.FC = () => {
     dispatch(shipOrder({ id: selected._id, data: shipForm }));
   };
 
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const handleRetryPayout = async (orderId: string) => {
+    setRetrying(orderId);
+    try {
+      await api.post(`/orders/${orderId}/retry-payout`);
+      toast.success("Payout sent successfully!");
+      dispatch(fetchSalesOrders(undefined));
+    } catch (e: any) { toast.error(e.message); }
+    finally { setRetrying(null); }
+  };
+
+  // ── Chart data: sales grouped by month ──────────────────────────────────────
+  const totalReceived = salesOrders.reduce((sum, o) => sum + (o.payoutStatus === "done" ? o.payoutAmount : 0), 0);
+  const totalSales = salesOrders.length;
+  const paidCount = salesOrders.filter(o => o.paymentStatus === "paid").length;
+  const monthly = (() => {
+    const map = new Map<string, { month: string; sales: number; received: number }>();
+    [...salesOrders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).forEach(o => {
+      const d = new Date(o.createdAt);
+      const key = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      if (!map.has(key)) map.set(key, { month: key, sales: 0, received: 0 });
+      const row = map.get(key)!;
+      row.sales += 1;
+      if (o.payoutStatus === "done") row.received += o.payoutAmount;
+    });
+    return Array.from(map.values());
+  })();
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2"><DollarSign size={24} /> My Sales</h1>
+
+      {salesOrders.length > 0 && (
+        <>
+          <div className="grid sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-400 mb-1">Total Sales</p>
+              <p className="text-2xl font-bold text-gray-900">{totalSales}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-400 mb-1">Paid Orders</p>
+              <p className="text-2xl font-bold text-gray-900">{paidCount}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-400 mb-1">Total Received</p>
+              <p className="text-2xl font-bold text-green-600">₹{totalReceived.toLocaleString()}</p>
+            </div>
+          </div>
+          {monthly.length > 1 && (
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Sales Over Time</p>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={monthly}>
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip />
+                    <Bar dataKey="sales" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Amount Received (₹)</p>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={monthly}>
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <Line type="monotone" dataKey="received" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {loading ? <div className="flex justify-center py-20"><Spinner size="h-10 w-10" /></div>
         : salesOrders.length === 0 ? <EmptyState title="No sales yet" desc="When buyers win your auctions and pay, orders will appear here." icon={<DollarSign size={48} />} action={{ label: "My Auctions", to: "/my-auctions" }} />
           : (
@@ -356,7 +420,21 @@ export const MySales: React.FC = () => {
                             </button>
                           )}
                           {o.payoutStatus === "done" && <span className="text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg flex items-center gap-1"><CheckCircle size={11} /> Payout sent ₹{o.payoutAmount.toLocaleString()}</span>}
-                          {o.payoutStatus === "failed" && <span className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">Payout failed. Contact support.</span>}
+                          {o.payoutStatus === "failed" && (
+                            <div className="flex flex-col gap-1.5 w-full">
+                              <span className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">{o.payoutError || "Payout failed."}</span>
+                              <div className="flex gap-2">
+                                <button onClick={() => handleRetryPayout(o._id)} disabled={retrying === o._id}
+                                  className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 flex items-center gap-1">
+                                  <RefreshCw size={11} className={retrying === o._id ? "animate-spin" : ""} /> {retrying === o._id ? "Retrying..." : "Retry Payout"}
+                                </button>
+                                {/UPI ID/i.test(o.payoutError || "") && (
+                                  <Link to="/profile" className="text-xs text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">Add UPI ID</Link>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {o.payoutStatus === "processing" && <span className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg flex items-center gap-1"><Clock size={11} /> Payout processing...</span>}
                         </div>
                       </div>
                     </div>
@@ -399,75 +477,60 @@ export const MySales: React.FC = () => {
   );
 };
 
-// ─── Commission Proof ─────────────────────────────────────────────────────────
+// ─── Commission History (automatic) ────────────────────────────────────────────
+// Commission is deducted automatically from every payout at delivery confirmation
+// and sent straight to SmartAuction — there's nothing to manually pay or prove any
+// more. This page just shows the auctioneer their automatic commission history.
+interface CommissionEntry { _id: string; amount: number; source: string; createdAt: string; auction?: { title?: string; image?: { url?: string } } }
 export const CommissionProof: React.FC = () => {
   const { user } = useAppSelector(s => s.auth);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [amount, setAmount] = useState("");
-  const [comment, setComment] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [commissions, setCommissions] = useState<CommissionEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user || user.role !== "Auctioneer") return;
+    (async () => {
+      try {
+        const r = await api.get("/commission/my");
+        setCommissions(r.data.commissions); setTotal(r.data.total);
+      } catch (e: any) { toast.error(e.message); }
+      finally { setLoading(false); }
+    })();
+  }, [user]);
 
   if (!user || user.role !== "Auctioneer") return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) { toast.error("Please upload a payment screenshot."); return; }
-    if (!amount || Number(amount) <= 0) { toast.error("Enter valid amount."); return; }
-    if (Number(amount) > user.unpaidCommission) { toast.error(`Amount exceeds balance ₹${user.unpaidCommission}`); return; }
-    setLoading(true);
-    try {
-      const d = new FormData();
-      d.append("proof", file); d.append("amount", amount); d.append("comment", comment);
-      await api.post("/commission/proof", d);
-      toast.success("Proof submitted. Admin will review within 24 hours.");
-      setFile(null); setPreview(null); setAmount(""); setComment("");
-    } catch (e: any) { toast.error(e.message); }
-    finally { setLoading(false); }
-  };
-
   return (
-    <div className="max-w-lg mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Pay Commission</h1>
-      <p className="text-sm text-gray-500 mb-6">Upload proof of your commission payment to SmartAuction's bank account.</p>
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-        <p className="text-sm font-semibold text-amber-800">Outstanding Commission</p>
-        <p className="text-2xl font-bold text-amber-700 mt-1">₹{user.unpaidCommission.toLocaleString()}</p>
-        <p className="text-xs text-amber-600 mt-1">5% of your total auction sales</p>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Commission</h1>
+      <p className="text-sm text-gray-500 mb-6">Commission is deducted automatically from your payout when a sale is delivered — nothing to pay or submit manually.</p>
+      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+        <p className="text-sm font-semibold text-indigo-800 flex items-center gap-1.5"><CheckCircle size={14}/> Fully automatic</p>
+        <p className="text-2xl font-bold text-indigo-700 mt-1">₹{total.toLocaleString()}</p>
+        <p className="text-xs text-indigo-600 mt-1">Total commission (5% per sale) sent to SmartAuction so far</p>
       </div>
-      {user.unpaidCommission === 0 ? (
-        <div className="text-center py-10 bg-green-50 border border-green-200 rounded-xl">
-          <CheckCircle size={40} className="text-green-500 mx-auto mb-2" />
-          <p className="text-green-700 font-semibold">No outstanding commission!</p>
+      {loading ? (
+        <div className="flex justify-center py-16"><Spinner size="h-8 w-8" /></div>
+      ) : commissions.length === 0 ? (
+        <div className="text-center py-10 bg-gray-50 border border-gray-200 rounded-xl">
+          <p className="text-gray-500 text-sm">No commission recorded yet — it'll show up automatically after your first completed sale.</p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Screenshot *</label>
-            <label className="cursor-pointer block">
-              <div className={`border-2 border-dashed rounded-xl h-40 flex items-center justify-center overflow-hidden transition-colors ${preview ? "border-green-300" : "border-gray-300 hover:border-indigo-400"}`}>
-                {preview ? <img src={preview} alt="" className="h-full w-full object-contain p-1" /> : <div className="text-center"><Upload size={28} className="text-gray-300 mx-auto mb-2" /><p className="text-sm text-gray-500">Upload payment screenshot</p></div>}
+        <div className="space-y-2">
+          {commissions.map(c => (
+            <div key={c._id} className="bg-white rounded-lg border border-gray-200 p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                {c.auction?.image?.url && <img src={c.auction.image.url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0"/>}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{c.auction?.title || "Auction sale"}</p>
+                  <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</p>
+                </div>
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setPreview(URL.createObjectURL(f)); } }} />
-            </label>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Paid (₹) *</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₹</span>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} max={user.unpaidCommission} min={1} required
-                className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+              <p className="text-sm font-semibold text-gray-900 flex-shrink-0">₹{c.amount.toLocaleString()}</p>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comment / Transaction ID *</label>
-            <textarea value={comment} onChange={e => setComment(e.target.value)} rows={2} required placeholder="Transaction ID or payment reference"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
-          </div>
-          <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-60">
-            {loading ? "Submitting..." : "Submit Proof"}
-          </button>
-        </form>
+          ))}
+        </div>
       )}
     </div>
   );

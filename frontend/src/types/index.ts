@@ -44,6 +44,7 @@ export interface Order {
   deliveryStatus: "pending" | "shipped" | "delivered" | "completed" | "problem";
   payoutStatus: "pending" | "processing" | "done" | "failed";
   commissionRate: number; commissionAmount: number; payoutAmount: number;
+  payoutTxId?: string; payoutError?: string;
   complaintStatus: "none" | "open" | "resolved" | "blocked" | "refund";
   complaints: ComplaintEntry[];
   shipmentDetails?: { courier?: string; trackingId?: string; shippedDate?: string; notes?: string };
@@ -66,10 +67,17 @@ export interface Notification {
 
 export interface ChatMsg { _id?: string; role: "user" | "assistant"; content: string; createdAt?: string; }
 
-export interface AuthState { user: User | null; isAuthenticated: boolean; loading: boolean; error: string | null; message: string | null; }
-export interface AuctionState { auctions: Auction[]; myAuctions: Auction[]; auctionDetail: Auction | null; bids: BidEntry[]; loading: boolean; error: string | null; message: string | null; }
+export interface SiteRating {
+  _id: string; user: string;
+  userSatisfaction: number; aiFeatures: number; chatbotAssistance: number;
+  createdAt: string;
+}
+
+export interface AuthState { user: User | null; isAuthenticated: boolean; authChecked: boolean; loading: boolean; error: string | null; message: string | null; }
+export interface AuctionState { auctions: Auction[]; myAuctions: Auction[]; auctionDetail: Auction | null; bids: BidEntry[]; categoryCounts: Record<string, number>; loading: boolean; error: string | null; message: string | null; }
 export interface NotifState { notifications: Notification[]; unread: number; loading: boolean; }
 export interface OrderState { orders: Order[]; salesOrders: Order[]; activeOrder: Order | null; loading: boolean; error: string | null; message: string | null; }
+export interface SiteRatingState { rating: SiteRating | null; checked: boolean; loading: boolean; error: string | null; message: string | null; }
 
 export type WsMsg =
   | { type: "bid_update"; auctionId: string; currentBid: number; highestBidderName: string; highestBidderId: string; totalBids: number; bids: BidEntry[]; endTime: string; extended: boolean }

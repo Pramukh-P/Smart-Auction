@@ -22,9 +22,9 @@ export const isAuthorized = (...roles: string[]) => (req: any, res: Response, ne
   next();
 };
 
-export const trackCommissionStatus = catchAsyncErrors(async (req: any, res: Response, next: NextFunction) => {
-  const user = await User.findById(req.user._id);
-  if (user && user.unpaidCommission > 0)
-    return next(new ErrorHandler("Pay your unpaid commission before creating a new auction.", 403));
+// Commission is deducted automatically from each payout now (see confirmDelivery in
+// mainControllers.ts), so there's no manual "unpaid commission" debt that could ever
+// block a new auction. Kept as a no-op passthrough for route compatibility.
+export const trackCommissionStatus = catchAsyncErrors(async (_req: any, _res: Response, next: NextFunction) => {
   next();
 });

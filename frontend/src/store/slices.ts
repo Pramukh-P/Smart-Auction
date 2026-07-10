@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "../lib/axios";
-import { AuthState, AuctionState, NotifState, OrderState } from "../types";
+import { AuthState, AuctionState, NotifState, OrderState, SiteRatingState } from "../types";
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
-const authInit: AuthState = { user: null, isAuthenticated: false, loading: false, error: null, message: null };
+const authInit: AuthState = { user: null, isAuthenticated: false, authChecked: false, loading: false, error: null, message: null };
 
 const at = (
   name: string,
@@ -40,8 +40,8 @@ export const authSlice = createSlice({
     b.addCase(verifyOTP.pending, pend).addCase(verifyOTP.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(verifyOTP.rejected, rej);
     b.addCase(resendOTP.pending, pend).addCase(resendOTP.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resendOTP.rejected, rej);
     b.addCase(login.pending, pend).addCase(login.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.message = a.payload.message; }).addCase(login.rejected, rej);
-    b.addCase(logout.fulfilled, () => authInit).addCase(logout.rejected, () => authInit);
-    b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; }).addCase(fetchProfile.rejected, s => { s.loading = false; s.isAuthenticated = false; s.user = null; });
+    b.addCase(logout.fulfilled, () => ({ ...authInit, authChecked: true })).addCase(logout.rejected, () => ({ ...authInit, authChecked: true }));
+    b.addCase(fetchProfile.pending, pend).addCase(fetchProfile.fulfilled, (s, a) => { s.loading = false; s.isAuthenticated = true; s.user = a.payload.user; s.authChecked = true; }).addCase(fetchProfile.rejected, s => { s.loading = false; s.isAuthenticated = false; s.user = null; s.authChecked = true; });
     b.addCase(updateProfile.pending, pend).addCase(updateProfile.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.message = a.payload.message; }).addCase(updateProfile.rejected, rej);
     b.addCase(forgotPassword.pending, pend).addCase(forgotPassword.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(forgotPassword.rejected, rej);
     b.addCase(resetPassword.pending, pend).addCase(resetPassword.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; }).addCase(resetPassword.rejected, rej);
@@ -51,10 +51,15 @@ export const authSlice = createSlice({
 export const { clearError, clearMessage } = authSlice.actions;
 
 // ── AUCTION ───────────────────────────────────────────────────────────────────
-const aucInit: AuctionState = { auctions: [], myAuctions: [], auctionDetail: null, bids: [], loading: false, error: null, message: null };
+const aucInit: AuctionState = { auctions: [], myAuctions: [], auctionDetail: null, bids: [], categoryCounts: { All: 0 }, loading: false, error: null, message: null };
 
 export const fetchAuctions = createAsyncThunk("auction/all", async (params: any = {}, { rejectWithValue }) => {
   try { const r = await api.get("/auctions", { params }); return r.data; } catch (e: any) { return rejectWithValue(e.message); }
+});
+// Independent of the currently-selected category filter, so sidebar counts stay
+// accurate for every category (see getCategoryCounts on the backend).
+export const fetchCategoryCounts = createAsyncThunk("auction/categoryCounts", async (params: any = {}, { rejectWithValue }) => {
+  try { const r = await api.get("/auctions/meta/category-counts", { params }); return r.data; } catch (e: any) { return rejectWithValue(e.message); }
 });
 export const fetchAuction = createAsyncThunk("auction/one", async (id: string, { rejectWithValue }) => {
   try { const r = await api.get(`/auctions/${id}`); return r.data; } catch (e: any) { return rejectWithValue(e.message); }
@@ -110,6 +115,7 @@ export const auctionSlice = createSlice({
     const pend = (s: AuctionState) => { s.loading = true; s.error = null; };
     const rej = (s: AuctionState, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; };
     b.addCase(fetchAuctions.pending, pend).addCase(fetchAuctions.fulfilled, (s, a) => { s.loading = false; s.auctions = a.payload.items; }).addCase(fetchAuctions.rejected, rej);
+    b.addCase(fetchCategoryCounts.fulfilled, (s, a) => { s.categoryCounts = a.payload.counts; });
     b.addCase(fetchAuction.pending, pend).addCase(fetchAuction.fulfilled, (s, a) => { s.loading = false; s.auctionDetail = a.payload.auction; s.bids = a.payload.bidders || []; }).addCase(fetchAuction.rejected, rej);
     b.addCase(fetchMyAuctions.pending, pend).addCase(fetchMyAuctions.fulfilled, (s, a) => { s.loading = false; s.myAuctions = a.payload.auctions; }).addCase(fetchMyAuctions.rejected, rej);
     b.addCase(createAuction.pending, pend).addCase(createAuction.fulfilled, (s, a) => { s.loading = false; s.message = a.payload.message; if (a.payload.auction) s.auctions.unshift(a.payload.auction); }).addCase(createAuction.rejected, rej);
@@ -198,3 +204,31 @@ export const bidSlice = createSlice({
   }
 });
 export const { clearBidError, clearBidMessage } = bidSlice.actions;
+
+// ── SITE RATING ───────────────────────────────────────────────────────────────
+// Platform-wide rating (User Satisfaction / AI Features / Chatbot Assistance),
+// one submission per account. Shown on the Home page for logged-in users.
+const siteRatingInit: SiteRatingState = { rating: null, checked: false, loading: false, error: null, message: null };
+
+export const fetchMySiteRating = createAsyncThunk("siteRating/mine", async (_, { rejectWithValue }) => {
+  try { const r = await api.get("/site-rating/me"); return r.data; } catch (e: any) { return rejectWithValue(e.message); }
+});
+export const submitSiteRating = createAsyncThunk(
+  "siteRating/submit",
+  async (data: { userSatisfaction: number; aiFeatures: number; chatbotAssistance: number }, { rejectWithValue }) => {
+    try { const r = await api.post("/site-rating", data); return r.data; } catch (e: any) { return rejectWithValue(e.message); }
+  }
+);
+
+export const siteRatingSlice = createSlice({
+  name: "siteRating", initialState: siteRatingInit,
+  reducers: { clearSiteRatingError: s => { s.error = null; }, clearSiteRatingMessage: s => { s.message = null; } },
+  extraReducers: b => {
+    b.addCase(fetchMySiteRating.fulfilled, (s, a) => { s.rating = a.payload.rating; s.checked = true; });
+    b.addCase(fetchMySiteRating.rejected, s => { s.checked = true; });
+    b.addCase(submitSiteRating.pending, s => { s.loading = true; s.error = null; });
+    b.addCase(submitSiteRating.fulfilled, (s, a) => { s.loading = false; s.rating = a.payload.rating; s.message = a.payload.message; });
+    b.addCase(submitSiteRating.rejected, (s, a: PayloadAction<any>) => { s.loading = false; s.error = a.payload; });
+  }
+});
+export const { clearSiteRatingError, clearSiteRatingMessage } = siteRatingSlice.actions;

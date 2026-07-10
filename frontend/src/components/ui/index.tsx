@@ -1,9 +1,11 @@
 import React from "react";
 import { Link, Navigate } from "react-router-dom";
 import { Clock, Eye, Heart, Sparkles, ArrowUpRight } from "lucide-react";
+import toast from "react-hot-toast";
 import { Auction } from "../../types";
 import { useCountdown, fmtCountdown } from "../../hooks/index";
-import { useAppSelector } from "../../store/store";
+import { useAppDispatch, useAppSelector } from "../../store/store";
+import { toggleWishlist } from "../../store/slices";
 
 // ── StatusBadge ───────────────────────────────────────────────────────────────
 export const StatusBadge: React.FC<{ status: string; startTime: string }> = ({ status, startTime }) => {
@@ -13,22 +15,45 @@ export const StatusBadge: React.FC<{ status: string; startTime: string }> = ({ s
   return <span className="flex items-center gap-1 bg-green-100 text-green-700 text-[11px] font-semibold px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"/>Live</span>;
 };
 
+// Auctions that haven't started yet show "Starts in" (with the exact date & time),
+// otherwise the usual countdown to end. Shared by AuctionCard and the item page.
+export const auctionTimerLabel = (auction: { startTime: string; endTime: string; status: string }, cd: ReturnType<typeof useCountdown>): string => {
+  const hasStarted = new Date(auction.startTime) <= new Date();
+  if (!hasStarted) return `Starts ${new Date(auction.startTime).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`;
+  if (auction.status !== "active" || cd.isExpired) return "Ended";
+  return fmtCountdown(cd);
+};
+
 // ── AuctionCard ───────────────────────────────────────────────────────────────
-interface CardProps { auction: Auction; viewCount?: number; likeCount?: number; }
-const AuctionCard: React.FC<CardProps> = ({ auction, viewCount = 0, likeCount = 0 }) => {
-  const cd = useCountdown(auction.endTime);
+interface CardProps { auction: Auction; viewCount?: number; }
+const AuctionCard: React.FC<CardProps> = ({ auction, viewCount = 0 }) => {
+  const dispatch = useAppDispatch();
+  const { user, isAuthenticated } = useAppSelector(s => s.auth);
+  const cd = useCountdown(auction.startTime && new Date(auction.startTime) > new Date() ? auction.startTime : auction.endTime);
   const isLive = auction.status === "active" && new Date(auction.startTime) <= new Date();
-  const lastMin = !cd.isExpired && cd.totalSeconds <= 180;
+  const hasStarted = new Date(auction.startTime) <= new Date();
+  const lastMin = hasStarted && !cd.isExpired && cd.totalSeconds <= 180;
   const seller = typeof auction.createdBy === "object" ? auction.createdBy : null;
+  const inWishlist = !!user?.wishlist?.includes(auction._id);
+
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!isAuthenticated) { toast.error("Login to wishlist."); return; }
+    dispatch(toggleWishlist(auction._id));
+  };
 
   return (
-    <Link to={`/auction/item/${auction._id}`} className="group block">
+    <Link to={`/auction/item/${auction._id}`} className="group block animate-fade-in-up">
       <div className={`bg-white rounded-xl border overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${lastMin && isLive ? "border-red-300 ring-1 ring-red-200" : "border-gray-200"}`}>
         <div className="relative overflow-hidden h-48">
           <img src={auction.image?.url} alt={auction.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"/>
           <div className="absolute top-2 left-2"><StatusBadge status={auction.status} startTime={auction.startTime}/></div>
+          <button onClick={handleWishlist} title={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+            className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${inWishlist ? "bg-white text-red-500" : "bg-black/30 text-white hover:bg-black/50"}`}>
+            <Heart size={14} fill={inWishlist ? "currentColor" : "none"}/>
+          </button>
           {auction.aiPricePrediction && (
-            <div className="absolute top-2 right-2 flex items-center gap-1 bg-indigo-600/90 text-white text-[11px] font-medium px-2 py-0.5 rounded-full">
+            <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-indigo-600/90 text-white text-[11px] font-medium px-2 py-0.5 rounded-full">
               <Sparkles size={10}/> AI Prediction
             </div>
           )}
@@ -60,12 +85,11 @@ const AuctionCard: React.FC<CardProps> = ({ auction, viewCount = 0, likeCount = 
             </div>
           </div>
           <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
-            <div className={`flex items-center gap-1 text-xs font-medium ${cd.isExpired ? "text-gray-400" : lastMin ? "text-red-500 animate-pulse" : "text-gray-500"}`}>
-              <Clock size={11}/> {fmtCountdown(cd)}
+            <div className={`flex items-center gap-1 text-xs font-medium ${!hasStarted ? "text-amber-600" : cd.isExpired ? "text-gray-400" : lastMin ? "text-red-500 animate-pulse" : "text-gray-500"}`}>
+              <Clock size={11}/> {auctionTimerLabel(auction, cd)}
             </div>
             <div className="flex items-center gap-3 text-xs text-gray-400">
               <span className="flex items-center gap-0.5"><Eye size={10}/> {viewCount}</span>
-              <span className="flex items-center gap-0.5"><Heart size={10}/> {likeCount}</span>
             </div>
           </div>
         </div>
@@ -86,15 +110,16 @@ export const PageLoader: React.FC = () => (
 
 // ── Protected Routes ──────────────────────────────────────────────────────────
 export const ProtectedRoute: React.FC<{ children: React.ReactNode; roles?: string[] }> = ({ children, roles }) => {
-  const { isAuthenticated, user, loading } = useAppSelector(s => s.auth);
-  if (loading) return <PageLoader/>;
+  const { isAuthenticated, user, loading, authChecked } = useAppSelector(s => s.auth);
+  if (loading || !authChecked) return <PageLoader/>;
   if (!isAuthenticated) return <Navigate to="/login" replace/>;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace/>;
   return <>{children}</>;
 };
 
 export const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAppSelector(s => s.auth);
+  const { isAuthenticated, authChecked } = useAppSelector(s => s.auth);
+  if (!authChecked) return <PageLoader/>;
   if (isAuthenticated) return <Navigate to="/" replace/>;
   return <>{children}</>;
 };

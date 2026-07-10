@@ -57,6 +57,28 @@ export const createAuction = catchAsyncErrors(async (req: any, res: Response, ne
   res.status(201).json({ success: true, message: `Auction created. Goes live at ${start.toLocaleString()}`, auction });
 });
 
+// Category counts ignore the currently-selected category filter (but respect
+// search/status) so the sidebar can show accurate counts for every category at once,
+// instead of just the counts within whatever category is already selected.
+export const getCategoryCounts = catchAsyncErrors(async (req: Request, res: Response) => {
+  const { status, search } = req.query as any;
+  const filter: any = {};
+  if (status) {
+    if (status === "live") { filter.status = "active"; filter.startTime = { $lte: new Date() }; }
+    else if (status === "upcoming") { filter.status = "active"; filter.startTime = { $gt: new Date() }; }
+    else if (status === "ended") filter.status = "ended";
+  }
+  if (search) filter.title = { $regex: search, $options: "i" };
+
+  const [byCategory, total] = await Promise.all([
+    Auction.aggregate([{ $match: filter }, { $group: { _id: "$category", count: { $sum: 1 } } }]),
+    Auction.countDocuments(filter)
+  ]);
+  const counts: Record<string, number> = { All: total };
+  for (const c of byCategory) counts[c._id] = c.count;
+  res.status(200).json({ success: true, counts });
+});
+
 export const getAllAuctions = catchAsyncErrors(async (req: Request, res: Response) => {
   const { category, status, search, sort, page = "1", limit = "20" } = req.query as any;
   const filter: any = {};

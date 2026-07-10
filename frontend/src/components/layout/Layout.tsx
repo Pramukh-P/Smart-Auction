@@ -11,7 +11,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAppSelector(s => s.auth);
+  const { user, isAuthenticated, authChecked } = useAppSelector(s => s.auth);
   const { notifications, unread } = useAppSelector(s => s.notif);
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -179,6 +179,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     )}
                   </div>
                 </>
+              ) : !authChecked ? (
+                <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
               ) : (
                 <div className="flex items-center gap-2">
                   <Link to="/login" className="text-sm text-gray-600 hover:text-indigo-600 font-medium px-3 py-1.5">Login</Link>

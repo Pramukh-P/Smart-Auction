@@ -118,6 +118,27 @@ export const Order: Model<IOrderDocument> = mongoose.model<IOrderDocument>("Orde
   createdAt: { type: Date, default: Date.now }
 }));
 
+// ── SiteRating ────────────────────────────────────────────────────────────────
+// One rating per account (enforced both by the unique index below and in the
+// controller, which rejects a second submission). Powers the "Rate SmartAuction"
+// panel shown to logged-in users on the Home page.
+export interface ISiteRatingDocument extends Document {
+  user: mongoose.Types.ObjectId;
+  userSatisfaction: number;
+  aiFeatures: number;
+  chatbotAssistance: number;
+  createdAt: Date;
+}
+export const SiteRating: Model<ISiteRatingDocument> = mongoose.model<ISiteRatingDocument>("SiteRating",
+  new Schema<ISiteRatingDocument>({
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    userSatisfaction: { type: Number, min: 1, max: 5, required: true },
+    aiFeatures: { type: Number, min: 1, max: 5, required: true },
+    chatbotAssistance: { type: Number, min: 1, max: 5, required: true },
+    createdAt: { type: Date, default: Date.now }
+  })
+);
+
 // ── ChatMessage ───────────────────────────────────────────────────────────────
 export interface IChatMessageDocument extends Document {
   user: mongoose.Types.ObjectId;
@@ -130,6 +151,27 @@ export const ChatMessage: Model<IChatMessageDocument> = mongoose.model<IChatMess
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     role: { type: String, enum: ["user","assistant"], required: true },
     content: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  })
+);
+
+// ── ChatComplaint ─────────────────────────────────────────────────────────────
+// Raised automatically by the AI support chatbot when it can't resolve a user's issue.
+export interface IChatComplaintDocument extends Document {
+  user: mongoose.Types.ObjectId;
+  userName: string;
+  email: string;
+  details: string;
+  status: "open" | "resolved";
+  createdAt: Date;
+}
+export const ChatComplaint: Model<IChatComplaintDocument> = mongoose.model<IChatComplaintDocument>("ChatComplaint",
+  new Schema<IChatComplaintDocument>({
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userName: { type: String, required: true },
+    email: { type: String, required: true },
+    details: { type: String, required: true },
+    status: { type: String, enum: ["open","resolved"], default: "open" },
     createdAt: { type: Date, default: Date.now }
   })
 );

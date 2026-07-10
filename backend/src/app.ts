@@ -2,20 +2,24 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
-import { userRouter, auctionRouter, bidRouter, orderRouter, notifRouter, commissionRouter, chatRouter, adminRouter } from "./router/index";
+import { userRouter, auctionRouter, bidRouter, orderRouter, notifRouter, commissionRouter, chatRouter, adminRouter, siteRatingRouter } from "./router/index";
 import { errorMiddleware } from "./middlewares/error";
 
 const app = express();
 
+// FRONTEND_URL may be a single URL or a comma-separated list (e.g. when you have
+// a staging + production frontend). Trailing slashes are stripped defensively.
 const ALLOWED = [
-  process.env.FRONTEND_URL || "http://localhost:5173",
+  ...(process.env.FRONTEND_URL || "").split(",").map(u => u.trim().replace(/\/$/, "")).filter(Boolean),
   "http://localhost:5173",
   "https://localhost:5173"
 ];
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || ALLOWED.includes(origin) || origin.endsWith(".netlify.app")) return cb(null, true);
+    if (!origin) return cb(null, true);
+    const clean = origin.replace(/\/$/, "");
+    if (ALLOWED.includes(clean) || clean.endsWith(".netlify.app") || clean.endsWith(".vercel.app")) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -38,6 +42,7 @@ app.use("/api/v1/notifications", notifRouter);
 app.use("/api/v1/commission", commissionRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/site-rating", siteRatingRouter);
 
 app.use(errorMiddleware);
 export default app;

@@ -8,7 +8,7 @@ import Chatbot from "./components/chatbot/Chatbot";
 import { ProtectedRoute, GuestRoute, PageLoader } from "./components/ui/index";
 
 // Pages
-import { Home, Login, Register, ForgotPassword, AuctionsList, AuctionDetail } from "./pages/PublicPages";
+import { Home, Login, Register, VerifyEmail, ForgotPassword, AuctionsList, AuctionDetail } from "./pages/PublicPages";
 import { MyOrders, Wishlist, Profile } from "./pages/BidderPages";
 import { MyAuctions, CreateAuction, MySales, CommissionProof } from "./pages/AuctioneerPages";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -99,6 +99,7 @@ const App: React.FC = () => {
         {/* Guest only */}
         <Route path="/login" element={<GuestRoute><Login/></GuestRoute>}/>
         <Route path="/register" element={<GuestRoute><Register/></GuestRoute>}/>
+        <Route path="/verify-email" element={<GuestRoute><VerifyEmail/></GuestRoute>}/>
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword/></GuestRoute>}/>
 
         {/* Public with layout */}

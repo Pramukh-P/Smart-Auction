@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
-import { authSlice, auctionSlice, notifSlice, orderSlice, bidSlice } from "./slices";
+import { authSlice, auctionSlice, notifSlice, orderSlice, bidSlice, siteRatingSlice } from "./slices";
 
 export const store = configureStore({
   reducer: {
@@ -9,6 +9,7 @@ export const store = configureStore({
     notif: notifSlice.reducer,
     order: orderSlice.reducer,
     bid: bidSlice.reducer,
+    siteRating: siteRatingSlice.reducer,
   },
   middleware: gd => gd({ serializableCheck: false })
 });

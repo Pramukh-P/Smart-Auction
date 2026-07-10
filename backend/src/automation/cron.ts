@@ -87,8 +87,10 @@ export const startCronJobs = (): void => {
               });
             }
 
-            // Update auctioneer commission
-            await User.findByIdAndUpdate(auction.createdBy, { $inc: { unpaidCommission: commAmt } });
+            // NOTE: commission is now fully automatic — it's deducted from the
+            // auctioneer's payout at delivery confirmation and recorded on the
+            // Commission collection there (see confirmDelivery). No manual
+            // "unpaidCommission" debt or payment-proof upload is needed any more.
             console.log(`✅ Auction ended: "${auction.title}" | Winner: ${winner?.userName} | Bid: ₹${auction.finalBidAmount}`);
           }
         } else {
