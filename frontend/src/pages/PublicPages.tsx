@@ -263,9 +263,21 @@ export const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* Hero auction carousel: 1 big + 2 small cards, capped at 2 pages of 3 */}
+            {/* Hero auction carousel: 1 big + up to 2 small cards, capped at 2 pages of 3.
+                Adapts to however many auctions actually exist — with only 1 or 2
+                auctions in the platform, it still shows those instead of showing
+                nothing (it used to require exactly 3 to render at all). */}
             <div className="hidden lg:block">
-              {currentHero.length === 3 && (
+              {currentHero.length === 1 && (
+                <div style={{ minHeight: "22rem" }}><HeroCard auction={currentHero[0]} big/></div>
+              )}
+              {currentHero.length === 2 && (
+                <div className="grid grid-cols-2 gap-4" style={{ minHeight: "22rem" }}>
+                  <HeroCard auction={currentHero[0]} big/>
+                  <HeroCard auction={currentHero[1]} big/>
+                </div>
+              )}
+              {currentHero.length >= 3 && (
                 <div className="grid grid-cols-2 grid-rows-2 gap-4" style={{ minHeight: "22rem" }}>
                   <div className="row-span-2"><HeroCard auction={currentHero[0]} big/></div>
                   <HeroCard auction={currentHero[1]}/>
