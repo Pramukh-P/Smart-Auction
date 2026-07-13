@@ -106,7 +106,7 @@ const AuctionCardFull: React.FC<{ auction: any; viewCount: number; badgeLabel?: 
         {a.aiPricePrediction ? <p className="text-xs text-indigo-600 font-medium mt-1.5">Est. Value: ₹{a.aiPricePrediction.toLocaleString()}</p> : null}
         <div className="flex items-center justify-between mt-3 text-xs text-gray-400">
           <CardTimeInfo auction={a}/>
-          <span className="flex items-center gap-1"><Eye size={13}/> {viewCount}</span>
+          <span className="hidden sm:flex items-center gap-1"><Eye size={13}/> {viewCount}</span>
         </div>
       </div>
     </Link>
@@ -782,7 +782,7 @@ export const AuctionsList: React.FC = () => {
   const [sort, setSort] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Status is filtered client-side (not sent to the API) so the tab/checkbox
+  // Status is filtered client-side (not sent to the API) so the tab
   // counts (All / Live / Upcoming / Ended) always reflect the true totals for
   // the current search + category + price filters, independent of which
   // status is currently selected.
@@ -800,6 +800,12 @@ export const AuctionsList: React.FC = () => {
     if (search) q.search = search;
     dispatch(fetchCategoryCounts(q));
   }, [search, dispatch]);
+
+  // Lock page scroll while the mobile filter drawer is open.
+  useEffect(() => {
+    document.body.style.overflow = showFilters ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [showFilters]);
 
   const catCounts: Record<string, number> = categoryCounts;
   const counts = {
@@ -819,8 +825,64 @@ export const AuctionsList: React.FC = () => {
     { key: "ended", label: "Ended", count: counts.ended },
   ];
 
+  // Categories with zero results are hidden from the list (this is a small
+  // catalog and a wall of empty categories adds nothing) — but "All" and
+  // whichever category is currently selected always stay visible.
+  const visibleCats = CATS.filter(c => c === "All" || c === category || (catCounts[c] || 0) > 0);
+
   const clearAll = () => { setSearch(""); setCategory("All"); setStatus([]); setMin(""); setMax(""); setSort("newest"); };
   const priceLabel = (min || max) ? `₹${min || "0"} - ₹${max || "∞"}` : "All";
+
+  // Chips (and the top "Clear All" link) only ever represent filters that
+  // differ from the default state, so nothing renders when nothing is applied.
+  const hasCategoryFilter = category !== "All";
+  const hasStatusFilter = status.length > 0;
+  const hasPriceFilter = !!(min || max);
+  const hasSortFilter = sort !== "newest";
+  const hasAnyFilter = hasCategoryFilter || hasStatusFilter || hasPriceFilter || hasSortFilter;
+
+  // Categories + Price Range, shared between the desktop sidebar and the
+  // mobile drawer so the two never drift out of sync. Status and Sort are
+  // deliberately NOT duplicated here — they already live in the status tabs
+  // and the Sort dropdown above.
+  const filterPanel = (
+    <>
+      <div className="bg-white border border-gray-200 rounded-xl p-4">
+        <h3 className="font-semibold text-gray-700 text-sm mb-3">Categories</h3>
+        <div className="space-y-0.5">
+          {visibleCats.map(c=>(
+            <button key={c} onClick={()=>setCategory(c)}
+              className={`w-full text-left text-sm px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between ${category===c?"text-indigo-600 bg-indigo-50 font-medium":"text-gray-600 hover:bg-gray-50"}`}>
+              <span className="flex items-center gap-2">{CAT_ICONS[c]}{c}</span>
+              <span className="text-gray-400 text-xs">{catCounts[c]||0}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-4">
+        <h3 className="font-semibold text-gray-700 text-sm mb-3">Price Range</h3>
+        <div className="space-y-2 mb-3">
+          {PRICE_RANGES.map(r => (
+            <label key={r.label} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="radio" name="priceRange" checked={min===r.min && max===r.max} onChange={()=>{setMin(r.min); setMax(r.max);}}
+                className="text-indigo-600 border-gray-300 focus:ring-indigo-500"/>
+              {r.label}
+            </label>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input value={min} onChange={e=>setMin(e.target.value)} type="number" placeholder="Min" className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500"/>
+          <span className="text-gray-400 text-xs flex-shrink-0">to</span>
+          <input value={max} onChange={e=>setMax(e.target.value)} type="number" placeholder="Max" className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500"/>
+        </div>
+      </div>
+
+      <button onClick={clearAll} className="w-full flex items-center justify-center gap-2 text-sm font-medium text-red-500 border border-red-200 bg-red-50 hover:bg-red-100 rounded-xl py-2.5 transition-colors">
+        <Trash2 size={15}/> Clear Filters
+      </button>
+    </>
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -835,7 +897,9 @@ export const AuctionsList: React.FC = () => {
             </button>
           );
         })}
-        <button onClick={clearAll} className="text-sm text-indigo-600 font-medium hover:underline px-2">Clear All</button>
+        {hasAnyFilter && (
+          <button onClick={clearAll} className="text-sm text-indigo-600 font-medium hover:underline px-2">Clear All</button>
+        )}
       </div>
 
       {/* Search + Sort */}
@@ -843,8 +907,7 @@ export const AuctionsList: React.FC = () => {
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"/>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search auctions, items or categories..."
-            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
-          <SlidersHorizontal size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"/>
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"/>
         </div>
         <div className="relative flex-shrink-0">
           <select value={sort} onChange={e=>setSort(e.target.value)}
@@ -853,86 +916,52 @@ export const AuctionsList: React.FC = () => {
           </select>
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
         </div>
-        <button onClick={()=>setShowFilters(!showFilters)} className="md:hidden flex items-center justify-center gap-2 text-sm text-gray-600 border border-gray-300 px-3 py-2.5 rounded-xl">
+        <button onClick={()=>setShowFilters(true)} className="md:hidden relative flex items-center justify-center gap-2 text-sm text-gray-600 border border-gray-300 px-3 py-2.5 rounded-xl flex-shrink-0">
           <SlidersHorizontal size={15}/> Filters
+          {(hasCategoryFilter || hasPriceFilter) && <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"/>}
         </button>
       </div>
 
-      {/* Active filter chips */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <FilterChip label={category === "All" ? "All Categories" : category} onClear={() => setCategory("All")}/>
-        <FilterChip label={status.length ? status.map(s => s[0].toUpperCase()+s.slice(1)).join(", ") : "Status: All"} onClear={() => setStatus([])}/>
-        <FilterChip label={`Price: ${priceLabel}`} onClear={() => { setMin(""); setMax(""); }}/>
-        <FilterChip label={SORT_LABELS[sort]} onClear={() => setSort("newest")}/>
-      </div>
+      {/* Active filter chips — only rendered once something differs from default */}
+      {hasAnyFilter && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {hasCategoryFilter && <FilterChip label={category} onClear={() => setCategory("All")}/>}
+          {hasStatusFilter && <FilterChip label={status.map(s => s[0].toUpperCase()+s.slice(1)).join(", ")} onClear={() => setStatus([])}/>}
+          {hasPriceFilter && <FilterChip label={`Price: ${priceLabel}`} onClear={() => { setMin(""); setMax(""); }}/>}
+          {hasSortFilter && <FilterChip label={SORT_LABELS[sort]} onClear={() => setSort("newest")}/>}
+        </div>
+      )}
 
       <div className="flex gap-8">
-        {/* Sidebar */}
-        <aside className={`${showFilters?"block":"hidden"} md:block w-64 flex-shrink-0 space-y-6`}>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-700 text-sm mb-3">Categories</h3>
-            <div className="space-y-0.5">
-              {CATS.map(c=>(
-                <button key={c} onClick={()=>setCategory(c)}
-                  className={`w-full text-left text-sm px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between ${category===c?"text-indigo-600 bg-indigo-50 font-medium":"text-gray-600 hover:bg-gray-50"}`}>
-                  <span className="flex items-center gap-2">{CAT_ICONS[c]}{c}</span>
-                  <span className="text-gray-400 text-xs">{catCounts[c]||0}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-700 text-sm mb-3">Price Range</h3>
-            <div className="space-y-2 mb-3">
-              {PRICE_RANGES.map(r => (
-                <label key={r.label} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input type="radio" name="priceRange" checked={min===r.min && max===r.max} onChange={()=>{setMin(r.min); setMax(r.max);}}
-                    className="text-indigo-600 border-gray-300 focus:ring-indigo-500"/>
-                  {r.label}
-                </label>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <input value={min} onChange={e=>setMin(e.target.value)} type="number" placeholder="Min" className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500"/>
-              <span className="text-gray-400 text-xs flex-shrink-0">to</span>
-              <input value={max} onChange={e=>setMax(e.target.value)} type="number" placeholder="Max" className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500"/>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-700 text-sm mb-3">Status</h3>
-            <div className="space-y-2.5">
-              {[["live","Live Auctions","bg-green-500", counts.live],["upcoming","Upcoming","bg-amber-500", counts.upcoming],["ended","Ended","bg-gray-500", counts.ended]].map(([v,l,dot,c]: any)=>(
-                <label key={v} className="flex items-center justify-between text-sm text-gray-600 cursor-pointer">
-                  <span className="flex items-center gap-2">
-                    <input type="checkbox" checked={status.includes(v)} onChange={()=>setStatus(p=>p.includes(v)?p.filter(x=>x!==v):[...p,v])}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"/>
-                    <span className={`w-2 h-2 rounded-full ${dot}`}/>
-                    {l}
-                  </span>
-                  <span className="text-gray-400 text-xs">{c}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-700 text-sm mb-3">Sort By</h3>
-            <select value={sort} onChange={e=>setSort(e.target.value)} className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500 bg-white">
-              {Object.entries(SORT_LABELS).map(([k,l]) => <option key={k} value={k}>{l}</option>)}
-            </select>
-          </div>
-
-          <button onClick={clearAll} className="w-full flex items-center justify-center gap-2 text-sm font-medium text-red-500 border border-red-200 bg-red-50 hover:bg-red-100 rounded-xl py-2.5 transition-colors">
-            <Trash2 size={15}/> Clear Filters
-          </button>
+        {/* Desktop sidebar */}
+        <aside className="hidden md:block w-64 flex-shrink-0 space-y-6">
+          {filterPanel}
         </aside>
 
-        {/* Grid */}
+        {/* Mobile filter drawer — slides in over the page instead of pushing
+            the grid down the screen */}
+        {showFilters && (
+          <div className="md:hidden fixed inset-0 z-50 flex justify-end">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowFilters(false)}/>
+            <div className="relative w-[85%] max-w-sm h-full bg-white overflow-y-auto p-4 space-y-6 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-gray-800">Filters</h2>
+                <button onClick={() => setShowFilters(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={18}/></button>
+              </div>
+              {filterPanel}
+              <button onClick={() => setShowFilters(false)}
+                className="w-full bg-indigo-600 text-white text-sm font-medium rounded-xl py-2.5 hover:bg-indigo-700 transition-colors">
+                Show {visibleAuctions.length} result{visibleAuctions.length === 1 ? "" : "s"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Grid — stays single-column until md, so cards never get squeezed
+            into a too-narrow 2-up layout on phones */}
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {Array.from({length:6}).map((_,i)=>(
                 <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
                   <div className="h-48 bg-gray-100"/><div className="p-4 space-y-2"><div className="h-4 bg-gray-100 rounded w-3/4"/><div className="h-3 bg-gray-100 rounded w-1/2"/></div>
@@ -942,7 +971,7 @@ export const AuctionsList: React.FC = () => {
           ) : visibleAuctions.length === 0 ? (
             <EmptyState title="No auctions found" desc="Try adjusting your filters" icon={<Search size={48}/>} action={{label:"Browse All",to:"/auctions"}}/>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {visibleAuctions.map((a: any)=><AuctionCardFull key={a._id} auction={a} viewCount={Math.floor(Math.random()*200)+20}/>)}
             </div>
           )}
