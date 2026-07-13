@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Gavel, Bell, ChevronDown, Menu, X, Search, LogOut, User, LayoutDashboard, Package, ShoppingBag, Heart, Plus } from "lucide-react";
+import { Gavel, Bell, ChevronDown, X, Search, LogOut, User, LayoutDashboard, Package, ShoppingBag, Heart, Plus, Home, CircleHelp } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../store/store";
 import { logout } from "../../store/slices";
 import { fetchNotifications, markAllSeen, deleteNotif } from "../../store/slices";
@@ -14,7 +14,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated, authChecked } = useAppSelector(s => s.auth);
   const { notifications, unread } = useAppSelector(s => s.notif);
 
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
@@ -101,7 +100,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {isAuthenticated && user ? (
                 <>
                   {/* Notifications */}
-                  <div ref={notifRef} className="relative">
+                  <div ref={notifRef} className="relative flex-shrink-0">
                     <button onClick={handleNotifOpen}
                       className="relative p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                       <Bell size={20} />
@@ -112,12 +111,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       )}
                     </button>
                     {notifOpen && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                      <div className="fixed top-16 right-2 sm:right-4 md:right-20 lg:right-24 w-[92vw] md:w-96 max-w-sm bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                           <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
                           <button onClick={() => setNotifOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={15} /></button>
                         </div>
-                        <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                        <div className="max-h-[40vh] overflow-y-auto divide-y divide-gray-50">
                           {notifications.length === 0
                             ? <p className="text-center text-gray-400 py-8 text-sm">All caught up! 🎉</p>
                             : notifications.map(n => (
@@ -144,20 +143,31 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   </div>
 
                   {/* User menu */}
-                  <div ref={userRef} className="relative">
-                    <button onClick={() => setUserOpen(v => !v)}
-                      className="flex items-center gap-1.5 p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                  <div ref={userRef} className="relative flex-shrink-0">
+                    <button
+                      onClick={() => setUserOpen(v => !v)}
+                      className="flex items-center gap-1.5 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
                       <img src={user.profileImage?.url || "https://via.placeholder.com/32"} alt={user.userName}
                         className="w-8 h-8 rounded-full object-cover border-2 border-indigo-100" />
                       <ChevronDown size={13} className="text-gray-500" />
                     </button>
                     {userOpen && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="font-semibold text-gray-800 text-sm truncate">{user.userName}</p>
-                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                          <span className="inline-block mt-1 text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">{user.role}</span>
+                      <div className="fixed top-16 right-2 sm:right-6 lg:right-4 w-72 md:w-64 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                        {/* Profile header */}
+                        <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+                          <img
+                            src={user.profileImage?.url || "https://via.placeholder.com/40"}
+                            alt={user.userName}
+                            className="w-11 h-11 rounded-full border-2 border-indigo-100 object-cover flex-shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-gray-800 truncate">{user.userName}</p>
+                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                            <span className="inline-block mt-1 text-[11px] bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">{user.role}</span>
+                          </div>
                         </div>
+
                         <div className="py-1">
                           <Link to="/profile" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><User size={14} /> Profile</Link>
                           {user.role === "Bidder" && <>
@@ -172,8 +182,48 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                           {user.role === "Super Admin" && (
                             <Link to="/admin" onClick={() => setUserOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><LayoutDashboard size={14} /> Admin Dashboard</Link>
                           )}
+
+                          {/* Mobile-only nav links */}
+                          <div className="md:hidden">
+                            <hr className="my-1 border-gray-100" />
+
+                            <Link
+                              to="/"
+                              onClick={() => setUserOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Home size={14} />
+                              Home
+                            </Link>
+
+                            <Link
+                              to="/auctions"
+                              onClick={() => setUserOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Gavel size={14} />
+                              Auctions
+                            </Link>
+
+                            <Link
+                              to="/how-it-works"
+                              onClick={() => setUserOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <CircleHelp size={14} />
+                              How It Works
+                            </Link>
+                          </div>
+
                           <hr className="my-1 border-gray-100" />
-                          <button onClick={handleLogout} className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"><LogOut size={14} /> Sign out</button>
+
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                          >
+                            <LogOut size={14} />
+                            Sign out
+                          </button>
                         </div>
                       </div>
                     )}
@@ -187,28 +237,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <Link to="/register" className="text-sm bg-indigo-600 text-white font-medium px-4 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">Sign Up</Link>
                 </div>
               )}
-              <button className="md:hidden p-2 text-gray-600" onClick={() => setMobileOpen(v => !v)}>
-                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
+
             </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        {mobileOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
-            <form onSubmit={handleSearch} className="flex gap-2 mb-3">
-              <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-100 text-sm rounded-lg outline-none" placeholder="Search auctions..." />
-              <button type="submit" className="px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg"><Search size={15} /></button>
-            </form>
-            {nav.map(n => (
-              <Link key={n.to} to={n.to} onClick={() => setMobileOpen(false)}
-                className={`block py-2 text-sm font-medium ${isActive(n.to) ? "text-indigo-600" : "text-gray-700"}`}>{n.label}</Link>
-            ))}
-            {user?.role === "Super Admin" && <Link to="/admin" onClick={() => setMobileOpen(false)} className="block py-2 text-sm text-gray-700">Admin</Link>}
-          </div>
-        )}
+
       </nav>
 
       {/* Main */}
